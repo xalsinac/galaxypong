@@ -1,11 +1,13 @@
-const CACHE_NAME = 'galaxy-pong-v3';
+const CACHE_NAME = 'galaxy-pong-v4';
 const CACHE_FILES = [
   './',
   './index.html',
   './pong-vectorial.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-maskable-192.png',
+  './icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (e) => {

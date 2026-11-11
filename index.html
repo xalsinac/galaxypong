@@ -4,10 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a1128">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Galaxy Pong - Pong Vectorial Sci-Fi con física relativista, efecto Magnus y retos de Math Universe.">
   <title>Galaxy Pong - Math Universe</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -618,6 +622,25 @@
       width: 100%;
       margin-top: 4px;
     }
+
+    /* Optimización de rendimiento para móviles (evitar sobrecarga de composición de capas) */
+    @media (max-width: 768px) {
+      .ov {
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        background: rgba(4, 8, 24, 0.94);
+      }
+      .card-btn {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(14, 23, 58, 0.85);
+      }
+      .stats-modal {
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        background: rgba(4, 7, 20, 0.96);
+      }
+    }
   </style>
 </head>
 <body>
@@ -953,9 +976,25 @@ let aiState = { reactionTimer: 0, errorOffset: 0 };
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
+// Detección de dispositivo móvil para perfil de rendimiento
+const isMobileDevice = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+  (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024);
+
+// En móviles (Pixel 9 Pro / Android / iOS), desactivamos shadowBlur para evitar rasterizaciones gaussianas que hunden los FPS
+if (isMobileDevice) {
+  try {
+    Object.defineProperty(ctx, 'shadowBlur', {
+      get: () => 0,
+      set: () => {},
+      configurable: true
+    });
+  } catch (e) {}
+}
+
 // --- GENERACIÓN DEL CAMPO DE ESTRELLAS DE FONDO ---
 const stars = [];
-for (let i = 0; i < 150; i++) {
+const numStars = isMobileDevice ? 55 : 150;
+for (let i = 0; i < numStars; i++) {
   stars.push({
     x: Math.random() * (GAME_W + 700) - 350,
     y: Math.random() * (GAME_H + 500) - 250,
@@ -1523,6 +1562,7 @@ function physicsStep(dt) {
     spk.life -= dt;
   }
   sparks = sparks.filter(spk => spk.life > 0);
+  if (isMobileDevice && sparks.length > 20) sparks = sparks.slice(-20);
 
   if (lastImpactNormal) {
     lastImpactNormal.timer -= dt / 1.1;
@@ -1784,6 +1824,7 @@ function updatePowerUps(dt) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
   }
   particles = particles.filter(p => p.life > 0);
+  if (isMobileDevice && particles.length > 25) particles = particles.slice(-25);
 
   if (!S.pw) return;
 
@@ -2301,9 +2342,10 @@ function drawFloatingAsteroids() {
 
 // --- RENDERIZADO VISUAL PROFESIONAL (SCI-FI ASSETS) ---
 function drawDeepGrid() {
-  const g = 25;
-  const minX = -350, maxX = GAME_W + 350;
-  const minY = -250, maxY = GAME_H + 250;
+  const isMob = isMobileDevice;
+  const g = isMob ? 38 : 25;
+  const minX = isMob ? -70 : -350, maxX = isMob ? GAME_W + 70 : GAME_W + 350;
+  const minY = isMob ? -50 : -250, maxY = isMob ? GAME_H + 50 : GAME_H + 250;
   const nx = Math.round((maxX - minX) / g);
   const ny = Math.round((maxY - minY) / g);
 
@@ -2359,22 +2401,17 @@ function drawDeepGrid() {
   else if (S.screenType === 'asteroids') baseColor = 'rgba(255, 159, 28, 0.16)';
   else if (S.screenType === 'lab') baseColor = 'rgba(76, 201, 240, 0.24)';
 
+  // Optimización crítica: Path Batching (2 llamadas a stroke() en lugar de 4.600)
+  const pathNormal = new Path2D();
+  const pathStressed = new Path2D();
+
   for (let j = 0; j <= ny; j++) {
     for (let i = 0; i < nx; i++) {
       const p1 = V[j * cols + i];
       const p2 = V[j * cols + i + 1];
-      const avg = (p1.stress + p2.stress) * 0.5;
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-
-      if (avg > 0.12) {
-        ctx.strokeStyle = `rgba(${Math.floor(140 + avg * 115)}, ${Math.floor(60 + avg * 120)}, 255, ${0.22 + avg * 0.58})`;
-      } else {
-        ctx.strokeStyle = baseColor;
-      }
-      ctx.stroke();
+      const target = (p1.stress + p2.stress) > 0.24 ? pathStressed : pathNormal;
+      target.moveTo(p1.x, p1.y);
+      target.lineTo(p2.x, p2.y);
     }
   }
 
@@ -2382,20 +2419,17 @@ function drawDeepGrid() {
     for (let j = 0; j < ny; j++) {
       const p1 = V[j * cols + i];
       const p2 = V[(j + 1) * cols + i];
-      const avg = (p1.stress + p2.stress) * 0.5;
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-
-      if (avg > 0.12) {
-        ctx.strokeStyle = `rgba(${Math.floor(140 + avg * 115)}, ${Math.floor(60 + avg * 120)}, 255, ${0.22 + avg * 0.58})`;
-      } else {
-        ctx.strokeStyle = baseColor;
-      }
-      ctx.stroke();
+      const target = (p1.stress + p2.stress) > 0.24 ? pathStressed : pathNormal;
+      target.moveTo(p1.x, p1.y);
+      target.lineTo(p2.x, p2.y);
     }
   }
+
+  ctx.strokeStyle = baseColor;
+  ctx.stroke(pathNormal);
+
+  ctx.strokeStyle = 'rgba(180, 100, 255, 0.55)';
+  ctx.stroke(pathStressed);
 }
 
 // Renderizado de Pala Sci-Fi con Escudo de Plasma y Parálisis
@@ -2935,20 +2969,31 @@ function render() {
   const isPortrait = isPortraitMode();
 
   if (isPortrait) {
-    if (canvas.width !== 900 || canvas.height !== 1600) {
-      canvas.width = 900; canvas.height = 1600;
+    const targetW = isMobileDevice ? 450 : 900;
+    const targetH = isMobileDevice ? 800 : 1600;
+    const s = isMobileDevice ? 1 : 2;
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW; canvas.height = targetH;
     }
-    ctx.setTransform(0, -2, 2, 0, 0, 1600);
+    ctx.setTransform(0, -s, s, 0, 0, targetH);
   } else {
-    if (canvas.width !== 1600 || canvas.height !== 900) {
-      canvas.width = 1600; canvas.height = 900;
+    const targetW = isMobileDevice ? 800 : 1600;
+    const targetH = isMobileDevice ? 450 : 900;
+    const s = isMobileDevice ? 1 : 2;
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW; canvas.height = targetH;
     }
-    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.setTransform(s, 0, 0, s, 0, 0);
   }
+
+  const bgX = isMobileDevice ? -80 : -350;
+  const bgY = isMobileDevice ? -60 : -250;
+  const bgW = isMobileDevice ? GAME_W + 160 : GAME_W + 700;
+  const bgH = isMobileDevice ? GAME_H + 120 : GAME_H + 500;
 
   // 1. Fondo espacial y nebulosas
   ctx.fillStyle = '#040817';
-  ctx.fillRect(-350, -250, GAME_W + 700, GAME_H + 500);
+  ctx.fillRect(bgX, bgY, bgW, bgH);
 
   // Nebulosa ambiental suave
   const t = performance.now() / 1000;
@@ -2962,7 +3007,7 @@ function render() {
   nGrad.addColorStop(0.5, neb2);
   nGrad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = nGrad;
-  ctx.fillRect(-350, -250, GAME_W + 700, GAME_H + 500);
+  ctx.fillRect(bgX, bgY, bgW, bgH);
 
   // Planeta gaseoso distante con anillos
   drawDistantPlanet(t);
