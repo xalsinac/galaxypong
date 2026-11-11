@@ -1,0 +1,22 @@
+{
+  "name": "Galaxy Pong - Math Universe",
+  "short_name": "GalaxyPong",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0a1128",
+  "theme_color": "#0a1128",
+  "description": "Pong Vectorial con física realista, efecto Magnus, relatividad y campos de Math Universe.",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

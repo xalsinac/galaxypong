@@ -1,0 +1,3535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a1128">
+  <meta name="description" content="Galaxy Pong - Pong Vectorial Sci-Fi con física relativista, efecto Magnus y retos de Math Universe.">
+  <title>Galaxy Pong - Math Universe</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #040817;
+      --tx: #e6ebff;
+      --pn: #0b122c;
+      --bd: #1f2c57;
+      --primary: #4cc9f0;
+      --accent: #ff4d8d;
+      --gold: #ffd166;
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    *, *::before, *::after { box-sizing: inherit; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--tx);
+      font: 500 14px 'Space Grotesk', system-ui, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+    }
+
+    #stage {
+      position: relative;
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: calc((100dvh - 70px) * 16 / 9);
+      max-height: calc(100dvh - 70px);
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.75), 0 0 0 1.5px var(--bd);
+      background: #040817;
+    }
+
+    @media (orientation: portrait) {
+      #stage {
+        max-width: calc((100dvh - 75px) * 9 / 16);
+        max-height: calc(100dvh - 75px);
+        aspect-ratio: 9 / 16;
+      }
+    }
+
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    /* HUD Matemático */
+    #hud {
+      display: flex;
+      align-items: center;
+      justify-content: safe center;
+      gap: 8px;
+      width: 100%;
+      max-width: calc((100dvh - 70px) * 16 / 9);
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex: none;
+      padding: 2px 4px;
+    }
+    @media (orientation: portrait) {
+      #hud { max-width: calc((100dvh - 75px) * 9 / 16); }
+    }
+    #hud::-webkit-scrollbar { display: none; }
+
+    dl {
+      display: flex;
+      flex: none;
+      margin: 0;
+      gap: 6px;
+    }
+    .hud-tag {
+      display: inline-flex;
+      align-items: center;
+      border: 1.5px solid var(--c);
+      background: color-mix(in srgb, var(--c) 14%, rgba(11, 18, 44, 0.9));
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      white-space: nowrap;
+      box-shadow: 0 0 8px color-mix(in srgb, var(--c) 25%, transparent);
+    }
+    .hud-tag dt { margin: 0; opacity: 0.85; margin-right: 4px; }
+    .hud-tag dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c); }
+
+    .eq-box {
+      font: italic 13px 'Cambria Math', Cambria, serif;
+      margin: 0;
+      padding: 3px 12px;
+      border: 1.5px solid rgba(255, 209, 102, 0.3);
+      background: rgba(11, 18, 44, 0.85);
+      border-radius: 999px;
+      white-space: nowrap;
+      flex: none;
+      color: #ffd166;
+      box-shadow: 0 0 10px rgba(255, 209, 102, 0.15);
+    }
+
+    /* Overlays y menús con Glassmorphism */
+    .ov {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: radial-gradient(circle at 50% 40%, rgba(10, 16, 42, 0.72) 0%, rgba(4, 7, 20, 0.88) 100%);
+      color: #fff;
+      text-align: center;
+      padding: 16px;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      overflow-y: auto;
+    }
+    .ov[hidden] { display: none; }
+
+    .ov h1 {
+      margin: 0;
+      font: 900 clamp(30px, 5.8vw, 54px) 'Orbitron', 'Space Grotesk', system-ui, sans-serif;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #ffffff 0%, #4cc9f0 50%, #8338ec 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(76, 201, 240, 0.65)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.9));
+    }
+    .title-sub {
+      font: 700 clamp(10px, 1.8vw, 12px) 'Orbitron', monospace;
+      letter-spacing: 0.28em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-top: -6px;
+      opacity: 0.95;
+      text-shadow: 0 0 12px rgba(255, 209, 102, 0.6);
+    }
+    .ov h2 {
+      margin: 0;
+      font: 700 clamp(14px, 2.6vw, 19px) 'Orbitron', 'Space Grotesk', sans-serif;
+      letter-spacing: .08em;
+      color: #4cc9f0;
+      text-shadow: 0 0 12px rgba(76, 201, 240, 0.5);
+    }
+    .ov p {
+      margin: 0;
+      max-width: 34em;
+      font-size: clamp(12px, 1.8vw, 14px);
+      opacity: 0.9;
+    }
+
+    /* Pasos del menú */
+    .menu-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 520px;
+    }
+    .menu-step[hidden] { display: none; }
+
+    .grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* Píldoras y Tarjetas con efecto cristal (Glassmorphism) */
+    .card-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 13px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(14, 23, 58, 0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 14px;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    }
+    .card-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(76, 201, 240, 0.25), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .card-btn:hover {
+      border-color: rgba(76, 201, 240, 0.7);
+      background: rgba(20, 34, 84, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(76, 201, 240, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+    }
+    .card-btn:hover::before { opacity: 1; }
+
+    .card-btn.selected {
+      border-color: rgba(255, 209, 102, 0.95);
+      background: rgba(255, 209, 102, 0.14);
+      box-shadow: 0 0 22px rgba(255, 209, 102, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+    }
+    .card-btn .c-icon-svg {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      transition: color 0.18s ease;
+    }
+    .card-btn.selected .c-icon-svg { color: var(--gold); }
+    .card-btn .c-title { font: 700 clamp(12px, 1.9vw, 15px) 'Space Grotesk', sans-serif; }
+    .card-btn .c-desc { font-size: clamp(9px, 1.4vw, 11px); opacity: 0.75; line-height: 1.2; }
+
+    /* Dificultad estilo cristal */
+    .diff-group {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+      justify-content: center;
+    }
+    .diff-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(14, 23, 58, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #fff;
+      font: 700 12px 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.16);
+    }
+    .diff-btn:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(24, 38, 92, 0.6);
+    }
+    .diff-btn.selected {
+      background: var(--c, var(--primary));
+      color: #040817;
+      border-color: var(--c, var(--primary));
+      box-shadow: 0 0 16px var(--c, var(--primary)), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+    }
+
+    /* Toggles */
+    .toggles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+      gap: 6px;
+      width: 100%;
+    }
+    .tg-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1.5px solid var(--c);
+      background: rgba(14, 23, 58, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      font: 700 11px 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      justify-content: center;
+      transition: all 0.15s ease;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    }
+    .tg-btn svg { width: 14px; height: 14px; }
+    .tg-btn.active {
+      background: var(--c);
+      color: #040817;
+      box-shadow: 0 0 12px var(--c);
+    }
+
+    /* Botones de navegación */
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .b {
+      font: 700 clamp(12px, 1.8vw, 14px) 'Space Grotesk', sans-serif;
+      border: 1.5px solid rgba(76, 201, 240, 0.6);
+      color: #fff;
+      background: rgba(14, 23, 58, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 999px;
+      padding: 9px 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    }
+    .b:hover {
+      background: rgba(76, 201, 240, 0.25);
+      box-shadow: 0 0 16px rgba(76, 201, 240, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    .b.big {
+      background: linear-gradient(135deg, #ff4d8d 0%, #7b2ff7 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      font: 900 clamp(18px, 3.4vw, 26px) 'Orbitron', 'Space Grotesk', sans-serif;
+      letter-spacing: .08em;
+      padding: 7px 36px;
+      box-shadow: 0 6px 24px rgba(255, 77, 141, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+    }
+    .b.big:hover {
+      transform: scale(1.04);
+      box-shadow: 0 8px 30px rgba(255, 77, 141, 0.75), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+    }
+
+    #gear {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      background: rgba(11, 18, 44, 0.8);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    #gear:hover { transform: rotate(45deg); border-color: var(--gold); }
+    #gear svg { width: 18px; height: 18px; }
+
+    #pop {
+      position: absolute;
+      left: 50%;
+      top: 18%;
+      transform: translateX(-50%);
+      font: clamp(24px, 5.5vw, 52px) Bangers, Impact, sans-serif;
+      letter-spacing: .04em;
+      color: var(--gold);
+      -webkit-text-stroke: 2px #110926;
+      text-shadow: 4px 4px 0 var(--c, var(--accent)), 8px 8px 0 #110926;
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 8;
+    }
+    #pop.go { animation: popAnim 1.2s ease-out; }
+
+    @keyframes popAnim {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.4) rotate(-10deg); }
+      15% { opacity: 1; transform: translateX(-50%) scale(1.2) rotate(-4deg); }
+      30% { transform: translateX(-50%) scale(1) rotate(-4deg); }
+      80% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.05) rotate(-4deg) translateY(-14px); }
+    }
+
+    #alr {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      font: 400 clamp(15px, 3.5vw, 28px) Bangers, Impact, sans-serif;
+      letter-spacing: .05em;
+      color: #fff;
+      background: #d7263d;
+      padding: 3px 18px;
+      border-radius: 12px;
+      border: 3px solid var(--gold);
+      box-shadow: 0 4px 16px rgba(215, 38, 61, 0.6);
+      white-space: nowrap;
+      pointer-events: none;
+      animation: alertBlink 0.5s steps(2) infinite;
+    }
+    @keyframes alertBlink { 50% { opacity: 0.4; } }
+
+    #challengeBanner {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 6;
+      background: rgba(11, 18, 44, 0.9);
+      border: 1.5px solid var(--gold);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 11px;
+      color: var(--gold);
+      box-shadow: 0 0 12px rgba(255, 209, 102, 0.3);
+      pointer-events: none;
+      display: none;
+      backdrop-filter: blur(6px);
+    }
+    #btnAudioToggle {
+      position: absolute;
+      top: 10px;
+      right: 54px;
+      z-index: 5;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      background: rgba(11, 18, 44, 0.85);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    #btnAudioToggle:hover { transform: scale(1.08); border-color: var(--primary); }
+    #btnAudioToggle svg { width: 18px; height: 18px; }
+
+    /* MODAL DE ESTADÍSTICAS DEL PARTIDO (ESTILO DEPORTIVO SCI-FI) */
+    .stats-modal {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(10, 16, 42, 0.94) 0%, rgba(3, 5, 18, 0.98) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 12;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      animation: fadeIn 0.3s ease-out;
+    }
+    .stats-modal[hidden] { display: none; }
+
+    .stats-card {
+      background: rgba(14, 23, 58, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 16px 22px;
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(76, 201, 240, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    }
+    .stats-header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .stats-tag {
+      font: 700 10px 'Orbitron', monospace;
+      letter-spacing: 0.22em;
+      color: var(--gold);
+      text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(255, 209, 102, 0.6);
+    }
+    .stats-winner-title {
+      font: 900 clamp(17px, 3.5vw, 24px) 'Orbitron', 'Space Grotesk', sans-serif;
+      letter-spacing: 0.08em;
+      margin: 0;
+      background: linear-gradient(180deg, #ffffff 0%, #ffd166 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 14px rgba(255, 209, 102, 0.5));
+    }
+    .stats-scoreboard {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: rgba(4, 8, 24, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 8px 16px;
+    }
+    .stats-team {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+    .stats-team.team-p1 {
+      justify-content: flex-start;
+      color: #4cc9f0;
+    }
+    .stats-team.team-p2 {
+      justify-content: flex-end;
+      color: #ff4d8d;
+    }
+    .team-badge {
+      font: 800 clamp(11px, 2vw, 13px) 'Orbitron', sans-serif;
+      letter-spacing: 0.06em;
+    }
+    .team-score-num {
+      font: 900 clamp(26px, 4.8vw, 38px) 'Orbitron', monospace;
+      line-height: 1;
+    }
+    .stats-team.team-p1 .team-score-num {
+      color: #4cc9f0;
+      text-shadow: 0 0 16px rgba(76, 201, 240, 0.7);
+    }
+    .stats-team.team-p2 .team-score-num {
+      color: #ff4d8d;
+      text-shadow: 0 0 16px rgba(255, 77, 141, 0.7);
+    }
+    .stats-vs-badge {
+      font: 900 12px 'Orbitron', sans-serif;
+      opacity: 0.45;
+      padding: 0 10px;
+    }
+    .stats-table {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      align-items: center;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.15s ease;
+    }
+    .stat-row:hover {
+      background: rgba(255, 255, 255, 0.07);
+    }
+    .stat-val {
+      font: 800 clamp(12px, 2vw, 15px) 'Orbitron', monospace;
+    }
+    .stat-val.p1 {
+      text-align: right;
+      color: #4cc9f0;
+      text-shadow: 0 0 8px rgba(76, 201, 240, 0.45);
+      padding-right: 8px;
+    }
+    .stat-val.p2 {
+      text-align: left;
+      color: #ff4d8d;
+      text-shadow: 0 0 8px rgba(255, 77, 141, 0.45);
+      padding-left: 8px;
+    }
+    .stat-val.highlight {
+      font-weight: 900;
+      filter: brightness(1.3);
+      text-shadow: 0 0 12px currentColor;
+    }
+    .stat-label-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font: 700 clamp(9px, 1.5vw, 11px) 'Space Grotesk', sans-serif;
+      color: #e2e8f0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+    .stats-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="c" width="1600" height="900"></canvas>
+    
+    <div id="challengeBanner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <span></span>
+    </div>
+    <div id="pop"></div>
+    <div id="alr" hidden></div>
+    <button id="btnAudioToggle" aria-label="Sonido" title="Silenciar / Activar Sonido">
+      <svg id="svgAudioOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      <svg id="svgAudioOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+    </button>
+    <button id="gear" aria-label="Opciones">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+
+    <!-- MENÚ PRINCIPAL MULTI-PANTALLA CON ASSETS VECTORIALES SVG -->
+    <div id="menu" class="ov">
+      <h1>GALAXY PONG</h1>
+      <div class="title-sub">MATH UNIVERSE · VECTOR PHYSICS</div>
+      <p id="msg">Física relativista, campos gravitatorios y matemáticas activas.</p>
+
+      <!-- PASO 1: Jugadores y Dificultad -->
+      <div id="step1" class="menu-step">
+        <h2>1. SELECCIONA JUGADORES</h2>
+        <div class="grid-2x2">
+          <button class="card-btn selected" id="btnMode1P">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <span class="c-title">1 Jugador</span>
+            <span class="c-desc">Desafía a la IA vectorial</span>
+          </button>
+          <button class="card-btn" id="btnMode2P">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <span class="c-title">2 Jugadores</span>
+            <span class="c-desc">Duelo local (mismo dispositivo)</span>
+          </button>
+        </div>
+
+        <div id="aiDifficultySection" style="width: 100%; margin-top: 4px;">
+          <div style="font-size: 11px; margin-bottom: 4px; opacity: 0.85;">Dificultad de la IA:</div>
+          <div class="diff-group">
+            <button class="diff-btn" data-diff="0" style="--c: #17a363;">🟢 Fácil</button>
+            <button class="diff-btn selected" data-diff="1" style="--c: #ffd166;">🟡 Media</button>
+            <button class="diff-btn" data-diff="2" style="--c: #ff4d8d;">🟣 Experta ⚡</button>
+          </div>
+          <div style="font-size: 10px; opacity: 0.7; margin-top: 3px; color: #ff88b8;">
+            * En Experta, la IA calcula la trayectoria predictiva con campos y Magnus.
+          </div>
+        </div>
+
+        <div class="nav-row">
+          <button class="b" id="btnStep1Next">Continuar a Pantallas ➔</button>
+        </div>
+      </div>
+
+      <!-- PASO 2: Selección de Pantalla / Escenario -->
+      <div id="step2" class="menu-step" hidden>
+        <h2>2. SELECCIONA PANTALLA</h2>
+        <div class="grid-2x2">
+          <button class="card-btn selected" data-screen="galaxy">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/></svg>
+            </div>
+            <span class="c-title">Galaxia Profunda</span>
+            <span class="c-desc">Agujeros negros y pozos gravitatorios</span>
+          </button>
+          <button class="card-btn" data-screen="asteroids">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14l3-6 5-1 4 3 4-1 1 5-4 5-6 1-4-3-3-3z"/><path d="M18 6l4-4"/><path d="M14 2l2 2"/></svg>
+            </div>
+            <span class="c-title">Cinturón Asteroides</span>
+            <span class="c-desc">Lluvia de rocas y choques elásticos</span>
+          </button>
+          <button class="card-btn" data-screen="alien">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a9 9 0 0 0-9 9c0 5 4 8 9 11 5-3 9-6 9-11a9 9 0 0 0-9-9z"/><ellipse cx="8.5" cy="11" rx="1.5" ry="2.5"/><ellipse cx="15.5" cy="11" rx="1.5" ry="2.5"/></svg>
+            </div>
+            <span class="c-title">Nebulosa Alien</span>
+            <span class="c-desc">Vórtices de plasma y fuerza de Lorentz</span>
+          </button>
+          <button class="card-btn" data-screen="lab">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 5 5 5-9"/><circle cx="11" cy="8" r="1.5"/><circle cx="16" cy="13" r="1.5"/></svg>
+            </div>
+            <span class="c-title">Laboratorio Vectorial</span>
+            <span class="c-desc">Espacio puro y estudio de trayectorias</span>
+          </button>
+        </div>
+
+        <div class="nav-row">
+          <button class="b" id="btnStep2Back">‹ Atrás</button>
+          <button class="b" id="btnStep2Next">Continuar a Modos ➔</button>
+        </div>
+      </div>
+
+      <!-- PASO 3: Selección de Modo de Juego -->
+      <div id="step3" class="menu-step" hidden>
+        <h2>3. MODO DE JUEGO</h2>
+        <div class="grid-2x2">
+          <button class="card-btn selected" data-mode="galaxy">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><circle cx="12" cy="12" r="1"/></svg>
+            </div>
+            <span class="c-title">Galaxy (Estándar)</span>
+            <span class="c-desc">Ritmo cósmico equilibrado y power-ups</span>
+          </button>
+          <button class="card-btn" data-mode="chaos">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <span class="c-title">Caos Cósmico</span>
+            <span class="c-desc">Eventos dobles rápidos y aceleración</span>
+          </button>
+          <button class="card-btn" data-mode="classic">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="3" height="12" rx="1"/><rect x="18" y="6" width="3" height="12" rx="1"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </div>
+            <span class="c-title">Pong Clásico</span>
+            <span class="c-desc">Física elástica pura sin obstáculos</span>
+          </button>
+          <button class="card-btn" data-mode="challenges">
+            <div class="c-icon-svg">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <span class="c-title">Retos Math Universe</span>
+            <span class="c-desc">Desafíos de ángulos, tirachinas y spin</span>
+          </button>
+        </div>
+
+        <div id="challengesSubmenu" style="display: none; width: 100%; margin-top: 6px;">
+          <div style="font-size: 11px; margin-bottom: 4px; opacity: 0.9; color: var(--gold);">Elige tu reto matemático:</div>
+          <div class="diff-group" style="flex-direction: column; gap: 4px;">
+            <button class="diff-btn selected" data-ch="0" style="--c: #4cc9f0; text-align: left; padding: 6px 10px;">
+              📐 <b>Reto 1: Ángulos Notables</b> — Marca 2 goles a 30°, 45° o 60°.
+            </button>
+            <button class="diff-btn" data-ch="1" style="--c: #ffd166; text-align: left; padding: 6px 10px;">
+              🚀 <b>Reto 2: Tirachinas Gravitatorio</b> — Usa un pozo para anotar a >750 km/h.
+            </button>
+            <button class="diff-btn" data-ch="2" style="--c: #ff4d8d; text-align: left; padding: 6px 10px;">
+              🌪️ <b>Reto 3: Efecto Magnus Extremo</b> — Anota con spin |ω| > 14.
+            </button>
+            <button class="diff-btn" data-ch="3" style="--c: #7b2ff7; text-align: left; padding: 6px 10px;">
+              🕳️ <b>Reto 4: Horizonte de Sucesos</b> — Sobrevive a un agujero negro sin encajar gol.
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-row" style="margin-top: 10px;">
+          <button class="b" id="btnStep3Back">‹ Atrás</button>
+          <button id="btnPlay" class="b big">¡JUGAR!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENÚ DE PAUSA Y AJUSTES -->
+    <div id="opt" class="ov" hidden>
+      <h1>PAUSA</h1>
+      <h2>AJUSTES DE PARTIDA</h2>
+      <div class="toggles-grid opt-tgs" style="max-width: 440px;"></div>
+      <div class="nav-row" style="margin-top: 10px;">
+        <button class="b" id="btnFullscreen">⛶ Pantalla completa</button>
+        <button class="b" id="btnMainMenu">Menú principal</button>
+      </div>
+      <button class="b big" id="btnResume" style="margin-top: 8px;">REANUDAR</button>
+    </div>
+
+    <!-- MODAL DE ESTADÍSTICAS DEL PARTIDO (ESTILO DEPORTIVO SCI-FI) -->
+    <div id="matchStatsModal" class="stats-modal" hidden>
+      <div class="stats-card">
+        <div class="stats-header">
+          <div class="stats-tag">MATH UNIVERSE · INFORME DE PARTIDO</div>
+          <h2 class="stats-winner-title" id="statsWinnerText">¡VICTORIA DEL JUGADOR 1!</h2>
+        </div>
+
+        <div class="stats-scoreboard">
+          <div class="stats-team team-p1">
+            <span class="team-badge">JUGADOR 1</span>
+            <span class="team-score-num" id="statScoreP1">0</span>
+          </div>
+          <div class="stats-vs-badge">VS</div>
+          <div class="stats-team team-p2">
+            <span class="team-score-num" id="statScoreP2">0</span>
+            <span class="team-badge" id="statTeamNameP2">IA</span>
+          </div>
+        </div>
+
+        <div class="stats-table">
+          <div class="stat-row">
+            <span class="stat-val p1" id="statGoalsP1">0</span>
+            <div class="stat-label-wrap">⚽ GOLES</div>
+            <span class="stat-val p2" id="statGoalsP2">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statComboP1">0</span>
+            <div class="stat-label-wrap">🔥 COMBO MÁXIMO</div>
+            <span class="stat-val p2" id="statComboP2">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statSmashP1">0</span>
+            <div class="stat-label-wrap">⚡ SMASH CINÉTICO</div>
+            <span class="stat-val p2" id="statSmashP2">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statMagnusP1">0</span>
+            <div class="stat-label-wrap">🌀 CURVAS MAGNUS</div>
+            <span class="stat-val p2" id="statMagnusP2">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statSpeedP1">0 km/h</span>
+            <div class="stat-label-wrap">🚀 VELOCIDAD MÁXIMA</div>
+            <span class="stat-val p2" id="statSpeedP2">0 km/h</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statPowerUpsP1">0</span>
+            <div class="stat-label-wrap">🔮 POWER-UPS</div>
+            <span class="stat-val p2" id="statPowerUpsP2">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-val p1" id="statAnglesP1">0</span>
+            <div class="stat-label-wrap">📐 ÁNGULOS NOTABLES</div>
+            <span class="stat-val p2" id="statAnglesP2">0</span>
+          </div>
+        </div>
+
+        <div class="stats-actions">
+          <button class="b big" id="btnStatsRematch" style="flex: 1.2;">🔄 REVANCHA</button>
+          <button class="b" id="btnStatsMenu" style="flex: 1;">⚙️ MENÚ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD MATEMÁTICO INFERIOR -->
+  <aside id="hud">
+    <dl>
+      <div class="hud-tag" style="--c: #17a363;"><dt>|v⃗|</dt><dd id="iv">0</dd></div>
+      <div class="hud-tag" style="--c: #7a5cff;"><dt>θ</dt><dd id="ia">0°</dd></div>
+      <div class="hud-tag" style="--c: #ff6b6b;"><dt>vₓ</dt><dd id="ix">0</dd></div>
+      <div class="hud-tag" style="--c: #ffd166;"><dt>vᵧ</dt><dd id="iy">0</dd></div>
+      <div class="hud-tag" style="--c: #e0457b;"><dt>ω (spin)</dt><dd id="iw">0</dd></div>
+      <div class="hud-tag" style="--c: #c026a6;"><dt>|a⃗ Magnus|</dt><dd id="im">0</dd></div>
+      <div class="hud-tag" style="--c: #ff9f1c;"><dt>|F⃗ campo|</dt><dd id="ig">0</dd></div>
+      <div class="hud-tag" style="--c: #00b4d8;"><dt>E_c</dt><dd id="ie">0</dd></div>
+    </dl>
+    <div class="eq-box" id="eqLive">dv⃗/dt = κ·ω·(−vᵧ, vₓ) + F⃗(r)</div>
+  </aside>
+</div>
+
+<script>
+/* ==========================================================================
+   GALAXY PONG - MATH UNIVERSE
+   Física relativista, efecto Magnus, renderizado Sci-Fi y retos matemáticos
+   ========================================================================== */
+
+const GAME_W = 800;
+const GAME_H = 450;
+const BALL_R = 10;
+const PADDLE_H = 86;
+const PADDLE_W = 12;
+const PADDLE_X = 28;
+const K_MAGNUS = 0.03;
+const WIN_SCORE = 7;
+const FIXED_DT = 1 / 120; // 120Hz physics
+
+const S = {
+  players: 1,
+  difficulty: 1,
+  screenType: 'galaxy',
+  gameMode: 'galaxy',
+  challengeId: 0,
+  fld: 1,
+  pw: 1,
+  met: 1,
+  snd: 1,
+  vec: 1,
+  run: 0,
+  pause: 0
+};
+
+// Progreso de retos
+const challengeProgress = {
+  active: false,
+  notableAngleHits: 0,
+  maxSlingshotSpeed: 0,
+  maxMagnusSpin: 0,
+  blackHoleSurvivalTime: 0,
+  goalConceded: false
+};
+
+// Estadísticas de partido estilo deportivo / fútbol Sci-Fi
+let matchStats = {
+  p1: { goals: 0, maxCombo: 0, magnusHits: 0, smashes: 0, maxSpeed: 0, powerUps: 0, notableAngles: 0 },
+  p2: { goals: 0, maxCombo: 0, magnusHits: 0, smashes: 0, maxSpeed: 0, powerUps: 0, notableAngles: 0 },
+  currentRally: 0
+};
+
+let balls = [];
+let paddles = [
+  { y: GAME_H / 2, vy: 0, targetY: null, hitFlash: 0, paralyzedTimer: 0 },
+  { y: GAME_H / 2, vy: 0, targetY: null, hitFlash: 0, paralyzedTimer: 0 }
+];
+let score = [0, 0];
+let wells = [];
+let meteorShower = { phase: 0, timer: 55, dirAngle: 0, spawnTimer: 0 };
+let meteors = [];
+let powerUp = null;
+let particles = [];
+let shockwaves = [];
+let sparks = [];
+let ufo = null;
+let alienLasers = [];
+let floatingAsteroids = [];
+let screenShake = 0;
+let holdServe = 0;
+let lastImpactNormal = null;
+
+let timeNextWell = 2.5;
+let timeNextPowerUp = 12;
+let lastPopTime = 0;
+let keys = {};
+let touchPointers = {};
+let aiState = { reactionTimer: 0, errorOffset: 0 };
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- GENERACIÓN DEL CAMPO DE ESTRELLAS DE FONDO ---
+const stars = [];
+for (let i = 0; i < 150; i++) {
+  stars.push({
+    x: Math.random() * (GAME_W + 700) - 350,
+    y: Math.random() * (GAME_H + 500) - 250,
+    r: Math.random() < 0.85 ? Math.random() * 1.1 + 0.3 : Math.random() * 2 + 1.2,
+    baseAlpha: 0.25 + Math.random() * 0.65,
+    speed: 1.2 + Math.random() * 3,
+    phase: Math.random() * Math.PI * 2,
+    color: ['#e6ebff', '#4cc9f0', '#ffd166', '#c77dff', '#ffffff'][Math.floor(Math.random() * 5)]
+  });
+}
+
+// --- COMETAS Y PLANETAS EN EL FONDO CÓSMICO ---
+let comets = [];
+let cometTimer = 2.5;
+
+function updateComets(dt) {
+  cometTimer -= dt;
+  if (cometTimer <= 0) {
+    cometTimer = 3.5 + Math.random() * 4.5;
+    const fromLeft = Math.random() < 0.5;
+    const startX = fromLeft ? -120 : GAME_W + 120;
+    const startY = Math.random() * (GAME_H * 0.45) - 40;
+    const angle = fromLeft ? 0.45 + Math.random() * 0.25 : Math.PI - (0.45 + Math.random() * 0.25);
+    const speed = 640 + Math.random() * 280;
+    comets.push({
+      x: startX,
+      y: startY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      len: 85 + Math.random() * 55,
+      alpha: 1.0,
+      life: 2.2
+    });
+  }
+
+  for (const c of comets) {
+    c.x += c.vx * dt;
+    c.y += c.vy * dt;
+    c.life -= dt;
+    c.alpha = Math.max(0, c.life / 2.2);
+  }
+  comets = comets.filter(c => c.life > 0);
+}
+
+function drawComets() {
+  for (const c of comets) {
+    const sp = Math.hypot(c.vx, c.vy);
+    const ux = c.vx / sp, uy = c.vy / sp;
+    const grad = ctx.createLinearGradient(c.x, c.y, c.x - ux * c.len, c.y - uy * c.len);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${c.alpha})`);
+    grad.addColorStop(0.25, `rgba(76, 201, 240, ${c.alpha * 0.8})`);
+    grad.addColorStop(0.7, `rgba(131, 56, 236, ${c.alpha * 0.4})`);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.save();
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#4cc9f0';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x - ux * c.len, c.y - uy * c.len);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// Planeta distante con anillos en órbita lenta
+function drawDistantPlanet(t) {
+  const px = GAME_W * 0.76 + Math.cos(t * 0.04) * 16;
+  const py = GAME_H * 0.28 + Math.sin(t * 0.04) * 10;
+  const pr = 34;
+
+  ctx.save();
+  ctx.translate(px, py);
+
+  // Anillo posterior
+  ctx.save();
+  ctx.rotate(-0.38);
+  ctx.strokeStyle = 'rgba(255, 209, 102, 0.22)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 68, 13, 0, Math.PI, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Esfera del planeta con atmósfera volumétrica
+  const pGrad = ctx.createRadialGradient(-10, -10, 3, 0, 0, pr);
+  pGrad.addColorStop(0, '#c7d2fe');
+  pGrad.addColorStop(0.35, '#6366f1');
+  pGrad.addColorStop(0.8, '#312e81');
+  pGrad.addColorStop(1, '#0c1229');
+  ctx.fillStyle = pGrad;
+  ctx.shadowColor = 'rgba(99, 102, 241, 0.35)';
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.arc(0, 0, pr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Anillo frontal
+  ctx.save();
+  ctx.rotate(-0.38);
+  ctx.strokeStyle = 'rgba(255, 225, 140, 0.4)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 68, 13, 0, 0, Math.PI);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function addShockwave(x, y, maxR = 90, color = 'rgba(76, 201, 240, 0.85)') {
+  shockwaves.push({ x, y, r: 6, maxR, color, alpha: 1.0 });
+}
+
+// --- AUDIO PROCEDURAL SINTETIZADO ---
+let audioCtx = null;
+let droneAudio = { initialized: false, osc1: null, osc2: null, lfo: null, filter: null, gain: null };
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!droneAudio.initialized && S.snd) initSpaceDrone();
+  return audioCtx;
+}
+
+function initSpaceDrone() {
+  if (droneAudio.initialized || !S.snd) return;
+  try {
+    const ac = getAudio();
+    droneAudio.gain = ac.createGain();
+    droneAudio.gain.gain.setValueAtTime(0.0001, ac.currentTime);
+    droneAudio.gain.connect(ac.destination);
+
+    // Filtro analógico cálido pasa-bajo
+    droneAudio.filter = ac.createBiquadFilter();
+    droneAudio.filter.type = 'lowpass';
+    droneAudio.filter.frequency.setValueAtTime(220, ac.currentTime);
+    droneAudio.filter.Q.setValueAtTime(3.5, ac.currentTime);
+    droneAudio.filter.connect(droneAudio.gain);
+
+    // Oscilador 1: Sub-bajo cósmico en La (55 Hz)
+    droneAudio.osc1 = ac.createOscillator();
+    droneAudio.osc1.type = 'triangle';
+    droneAudio.osc1.frequency.setValueAtTime(55, ac.currentTime);
+    droneAudio.osc1.connect(droneAudio.filter);
+
+    // Oscilador 2: Quinta armónica en Mi (82.4 Hz) con sutil batimiento analógico
+    droneAudio.osc2 = ac.createOscillator();
+    droneAudio.osc2.type = 'sine';
+    droneAudio.osc2.frequency.setValueAtTime(82.4, ac.currentTime);
+    droneAudio.osc2.detune.setValueAtTime(6, ac.currentTime);
+    droneAudio.osc2.connect(droneAudio.filter);
+
+    // LFO: Modulación respiratoria lenta del filtro (14s)
+    droneAudio.lfo = ac.createOscillator();
+    const lfoGain = ac.createGain();
+    droneAudio.lfo.frequency.setValueAtTime(0.07, ac.currentTime);
+    lfoGain.gain.setValueAtTime(110, ac.currentTime);
+    droneAudio.lfo.connect(lfoGain);
+    lfoGain.connect(droneAudio.filter.frequency);
+
+    droneAudio.osc1.start();
+    droneAudio.osc2.start();
+    droneAudio.lfo.start();
+    droneAudio.initialized = true;
+
+    updateSpaceDroneVolume();
+  } catch (e) {}
+}
+
+function updateSpaceDroneVolume() {
+  if (!droneAudio.gain || !audioCtx) return;
+  const targetVol = S.snd ? 0.035 : 0.0001;
+  droneAudio.gain.gain.linearRampToValueAtTime(targetVol, audioCtx.currentTime + 0.8);
+}
+
+function playTone(freq, duration, type = 'sine', vol = 0.1, rampFreq = null) {
+  if (!S.snd) return;
+  try {
+    const ac = getAudio();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const t = ac.currentTime;
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (rampFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, rampFreq), t + duration);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start(t);
+    osc.stop(t + duration);
+  } catch (e) {}
+}
+
+function playNoise(duration, vol = 0.15, filterFreq = 1000) {
+  if (!S.snd) return;
+  try {
+    const ac = getAudio();
+    const bufSize = Math.floor(ac.sampleRate * duration);
+    const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    const src = ac.createBufferSource();
+    const gain = ac.createGain();
+    const flt = ac.createBiquadFilter();
+    flt.frequency.value = filterFreq;
+    gain.gain.value = vol;
+    src.buffer = buf;
+    src.connect(flt);
+    flt.connect(gain);
+    gain.connect(ac.destination);
+    src.start();
+  } catch (e) {}
+}
+
+const SFX = {
+  hit: (sp = 400) => {
+    playTone(280 + sp * 0.28, 0.08, 'sawtooth', 0.07);
+    playTone(180, 0.09, 'sine', 0.1);
+  },
+  wall: () => playTone(150, 0.06, 'triangle', 0.1),
+  score: () => {
+    playTone(80, 0.5, 'sine', 0.22, 35);
+    setTimeout(() => playTone(523, 0.35, 'square', 0.1, 130), 40);
+  },
+  magnus: () => playTone(420, 0.35, 'sine', 0.12, 980),
+  well: () => playTone(140, 0.4, 'sine', 0.16, 50),
+  blackHole: () => { playTone(75, 1.1, 'sawtooth', 0.14, 28); playNoise(0.9, 0.14, 250); },
+  powerFire: () => { playNoise(0.4, 0.18, 3000); playTone(220, 0.4, 'sawtooth', 0.08, 900); },
+  doppler: () => playTone(950, 0.5, 'sine', 0.13, 220),
+  catapult: () => playTone(200, 0.25, 'square', 0.08, 1200),
+  puSpawn: () => { playTone(660, 0.08, 'square', 0.07); setTimeout(() => playTone(990, 0.12, 'square', 0.07), 80); },
+  alert: () => { playTone(880, 0.12, 'square', 0.08); setTimeout(() => playTone(620, 0.12, 'square', 0.08), 150); },
+  rock: () => { playNoise(0.28, 0.2, 1800); playTone(110, 0.18, 'triangle', 0.14, 40); },
+  mathChord: () => {
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => setTimeout(() => playTone(f, 0.25, 'sine', 0.1), i * 70));
+  },
+  challengeWin: () => {
+    [440, 554, 659, 880, 1108].forEach((f, i) => setTimeout(() => playTone(f, 0.3, 'square', 0.11), i * 110));
+  },
+  win: () => {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.25, 'square', 0.09), i * 140));
+  }
+};
+
+function triggerSFX(k, p) { if (SFX[k]) SFX[k](p); }
+
+// --- FÍSICA Y CAMPOS ---
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const getWellStrength = (w) => Math.max(0, Math.min(1, w.age, w.life - w.age));
+
+function calculateField(px, py, vx, vy) {
+  let ax = 0, ay = 0;
+  for (const w of wells) {
+    const s = getWellStrength(w);
+    const dx = w.x - px, dy = w.y - py;
+    const r2 = dx * dx + dy * dy;
+
+    if (w.k === 2) {
+      const f = (2.4e7 * s) / Math.pow(r2 + 3000, 1.5);
+      ax += dx * f - dy * f * 0.45;
+      ay += dy * f + dx * f * 0.45;
+    } else if (w.k === 0) {
+      const f = (2.4e6 * s) / Math.pow(r2 + 1200, 1.5);
+      ax += dx * f;
+      ay += dy * f;
+    } else {
+      const b = w.k * 2.4 * s * Math.exp(-r2 / 24000);
+      ax += -vy * b;
+      ay += vx * b;
+    }
+  }
+  return { ax, ay };
+}
+
+function handleBounce(ball, nx, ny, pv, mu, e, cx, cy, isPaddle = false, paddleIdx = 0) {
+  const tx = -ny, ty = nx;
+  let rx = ball.vx;
+  let ry = ball.vy - pv;
+  const vn = rx * nx + ry * ny;
+  if (vn >= 0) return;
+
+  const jn = -(1 + e) * vn;
+  rx += jn * nx;
+  ry += jn * ny;
+
+  const s = rx * tx + ry * ty - BALL_R * ball.w;
+  const jt = -clamp(s / 3, -mu * jn, mu * jn);
+  rx += jt * tx;
+  ry += jt * ty;
+
+  ball.w = clamp(ball.w - (2 * jt) / BALL_R, -30, 30);
+  ball.vx = rx;
+  ball.vy = ry + pv;
+
+  lastImpactNormal = { x: cx, y: cy, nx, ny, timer: 1.0 };
+  triggerSFX(mu > 0.1 ? 'hit' : 'wall', Math.hypot(rx, ry));
+
+  if (isPaddle) {
+    paddles[paddleIdx].hitFlash = 1.0;
+    addShockwave(cx, cy, 70, paddleIdx === 1 ? '#ff4d8d' : '#4cc9f0');
+    // Generar chispas de plasma en el escudo
+    for (let k = 0; k < 9; k++) {
+      sparks.push({
+        x: cx,
+        y: cy,
+        vx: (paddleIdx === 1 ? -1 : 1) * (Math.random() * 180 + 40),
+        vy: (Math.random() - 0.5) * 220,
+        life: 0.35,
+        color: paddleIdx === 1 ? '#ff4d8d' : '#4cc9f0'
+      });
+    }
+
+    // REGISTRAR IMPACTO PARA ESTADÍSTICAS Y COMBO
+    matchStats.currentRally++;
+    const pKey = paddleIdx === 0 ? 'p1' : 'p2';
+    matchStats[pKey].maxCombo = Math.max(matchStats[pKey].maxCombo, matchStats.currentRally);
+    ball.lastHitter = paddleIdx;
+
+    // AVISOS DE RACHA DE RALLY
+    if (matchStats.currentRally === 5) {
+      popText('¡RALLY RELATIVISTA ×5!', '#ffd166', true);
+      triggerSFX('mathChord');
+    } else if (matchStats.currentRally === 10) {
+      popText('¡COLISIÓN CUÁNTICA ×10!', '#ff4d8d', true);
+      triggerSFX('mathChord');
+    }
+
+    // --- MECÁNICA: SMASH CINÉTICO (p = m · v) ---
+    const paddleSpeed = Math.abs(pv);
+    if (paddleSpeed > 270) {
+      matchStats[pKey].smashes++;
+      ball.fire = 1.6;
+      ball.vx *= 1.28;
+      ball.vy *= 1.20;
+      screenShake = Math.max(screenShake, 8.5);
+      addShockwave(cx, cy, 140, '#ffd166');
+      popText('¡SMASH CINÉTICO! ⚡', '#ffd166', true);
+      playTone(780, 0.25, 'sawtooth', 0.16, 260);
+      for (let s = 0; s < 14; s++) {
+        sparks.push({
+          x: cx, y: cy,
+          vx: (paddleIdx === 1 ? -1 : 1) * (Math.random() * 320 + 80),
+          vy: (Math.random() - 0.5) * 350,
+          life: 0.45,
+          color: '#ffd166'
+        });
+      }
+    }
+
+    // Registrar velocidad máxima
+    const curSpeed = Math.hypot(ball.vx, ball.vy);
+    matchStats[pKey].maxSpeed = Math.max(matchStats[pKey].maxSpeed, curSpeed);
+
+    checkNotableAngle(ball, paddleIdx);
+  } else {
+    addShockwave(cx, cy, 40, 'rgba(255, 255, 255, 0.6)');
+  }
+
+  if (Math.abs(ball.w) > 9) {
+    if (isPaddle) {
+      const pKey = paddleIdx === 0 ? 'p1' : 'p2';
+      matchStats[pKey].magnusHits++;
+    }
+    popText('¡EFECTO MAGNUS!', '#e0457b');
+  }
+}
+
+function checkNotableAngle(ball, paddleIdx = null) {
+  const angleDeg = Math.atan2(Math.abs(ball.vy), Math.abs(ball.vx)) * (180 / Math.PI);
+  const angles = [
+    { deg: 30, rad: 'π/6' },
+    { deg: 45, rad: 'π/4' },
+    { deg: 60, rad: 'π/3' }
+  ];
+
+  for (const a of angles) {
+    if (Math.abs(angleDeg - a.deg) <= 3.8) {
+      if (paddleIdx !== null) {
+        const pKey = paddleIdx === 0 ? 'p1' : 'p2';
+        matchStats[pKey].notableAngles++;
+      }
+      triggerSFX('mathChord');
+      popText(`¡ÁNGULO NOTABLE ${a.deg}° (${a.rad})!`, '#ffd166', true);
+      addShockwave(ball.x, ball.y, 110, '#ffd166');
+      ball.vx *= 1.06;
+      ball.vy *= 1.06;
+
+      if (S.gameMode === 'challenges' && S.challengeId === 0) {
+        challengeProgress.notableAngleHits++;
+        updateChallengeBanner();
+        if (challengeProgress.notableAngleHits >= 2) {
+          completeChallenge('¡Has dominado los ángulos notables trigonométricos!');
+        }
+      }
+      break;
+    }
+  }
+}
+
+// --- INTELIGENCIA ARTIFICIAL EXPERTA CON PREDICCIÓN ---
+function predictTrajectory(ball, targetX) {
+  let simX = ball.x, simY = ball.y, simVx = ball.vx, simVy = ball.vy, simW = ball.w;
+  const dt = 1 / 60;
+  for (let s = 0; s < 100; s++) {
+    let ax = 0, ay = 0;
+    if (S.fld) {
+      const f = calculateField(simX, simY, simVx, simVy);
+      ax += f.ax; ay += f.ay;
+    }
+    ax += -K_MAGNUS * simW * simVy;
+    ay += K_MAGNUS * simW * simVx;
+    simVx += ax * dt;
+    simVy += ay * dt;
+    simX += simVx * dt;
+    simY += simVy * dt;
+    simW *= Math.exp(-0.2 * dt);
+
+    if (simY < BALL_R && simVy < 0) { simY = BALL_R; simVy = -simVy * 0.98; }
+    else if (simY > GAME_H - BALL_R && simVy > 0) { simY = GAME_H - BALL_R; simVy = -simVy * 0.98; }
+
+    if (simVx > 0 && simX >= targetX) {
+      return clamp(simY, PADDLE_H / 2, GAME_H - PADDLE_H / 2);
+    }
+  }
+  return simY;
+}
+
+function updateAIMovement() {
+  const p2 = paddles[1];
+  const targetBall = balls.filter(b => b.vx > 0).sort((a, b) => b.x - a.x)[0];
+  let targetY = GAME_H / 2;
+
+  if (targetBall) {
+    if (S.difficulty === 2) {
+      targetY = predictTrajectory(targetBall, GAME_W - PADDLE_X);
+    } else if (S.difficulty === 1) {
+      aiState.reactionTimer -= 1 / 60;
+      if (aiState.reactionTimer <= 0) {
+        aiState.reactionTimer = 0.15;
+        aiState.errorOffset = (Math.random() - 0.5) * 35;
+      }
+      targetY = targetBall.y + aiState.errorOffset;
+    } else {
+      aiState.reactionTimer -= 1 / 60;
+      if (aiState.reactionTimer <= 0) {
+        aiState.reactionTimer = 0.35;
+        aiState.errorOffset = (Math.random() - 0.5) * 90;
+      }
+      targetY = targetBall.y + aiState.errorOffset;
+    }
+  }
+
+  const speedCaps = [290, 420, 620];
+  const cap = speedCaps[S.difficulty];
+  p2.vy = clamp((targetY - p2.y) * 8, -cap, cap);
+}
+
+// --- FÍSICA EN CICLO FIJO (120 Hz) ---
+function physicsStep(dt) {
+  if (S.fld) {
+    timeNextWell -= dt;
+    if (timeNextWell <= 0) {
+      const isChaos = S.gameMode === 'chaos';
+      timeNextWell = isChaos ? 5 + Math.random() * 3 : 9 + Math.random() * 5;
+      const maxWells = isChaos ? 3 : 2;
+
+      if (wells.length < maxWells) {
+        let type = 0;
+        if (S.screenType === 'alien') {
+          type = Math.random() < 0.5 ? 1 : -1;
+          popText('¡VÓRTICE DE PLASMA ALIEN!', '#00f5d4', true);
+        } else if (S.screenType === 'galaxy') {
+          type = [0, 1, -1][Math.floor(Math.random() * 3)];
+          popText(type ? '¡CAMPO MAGNÉTICO!' : '¡POZO GRAVITATORIO!', type ? '#c77dff' : '#ff9f1c', true);
+        }
+        wells.push({
+          x: 280 + Math.random() * 240,
+          y: 90 + Math.random() * 270,
+          k: type,
+          age: 0,
+          life: isChaos ? 15 : 12
+        });
+      }
+    }
+  }
+
+  for (const w of wells) {
+    w.age += dt;
+    if (w.k !== 2) {
+      const a = getBlackHoleForce(w.x, w.y);
+      w.vx = (w.vx || 0) + a.ax * dt * 0.6;
+      w.vy = (w.vy || 0) + a.ay * dt * 0.6;
+      w.x += w.vx * dt;
+      w.y += w.vy * dt;
+      for (const h of wells) {
+        if (h.k === 2 && Math.hypot(h.x - w.x, h.y - w.y) < 30) {
+          w.age = Math.max(w.age, w.life - 0.4);
+        }
+      }
+    }
+  }
+  wells = wells.filter(w => w.age < w.life);
+  if (wells.some(w => w.k === 2)) screenShake = Math.max(screenShake, 2.2);
+
+  // Palas
+  for (let i = 0; i < 2; i++) {
+    const p = paddles[i];
+    if (p.hitFlash > 0) p.hitFlash = Math.max(0, p.hitFlash - dt * 3.5);
+
+    // Parálisis por rayo láser alienígena (3 segundos)
+    if (p.paralyzedTimer > 0) {
+      p.paralyzedTimer = Math.max(0, p.paralyzedTimer - dt);
+      p.vy = 0;
+      if (Math.random() < 0.4) {
+        const px = i === 1 ? GAME_W - PADDLE_X : PADDLE_X;
+        sparks.push({
+          x: px + (Math.random() - 0.5) * PADDLE_W,
+          y: p.y + (Math.random() - 0.5) * PADDLE_H,
+          vx: (Math.random() - 0.5) * 70,
+          vy: (Math.random() - 0.5) * 70,
+          life: 0.25,
+          color: '#00f5d4'
+        });
+      }
+      continue;
+    }
+
+    let keyDir = 0;
+    if (i === 0) keyDir = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0);
+    else if (S.players === 2) keyDir = (keys.ArrowDown ? 1 : 0) - (keys.ArrowUp ? 1 : 0);
+
+    if (i === 1 && S.players === 1) updateAIMovement();
+    else if (keyDir) { p.vy = keyDir * 500; p.targetY = null; }
+    else if (p.targetY !== null) p.vy = clamp((p.targetY - p.y) * 16, -660, 660);
+    else p.vy = 0;
+
+    p.y = clamp(p.y + p.vy * dt, PADDLE_H / 2, GAME_H - PADDLE_H / 2);
+  }
+
+  // Mecánicas de Pantallas Temáticas
+  if (S.screenType === 'alien') {
+    updateUFO(dt);
+    updateAlienLasers(dt);
+  } else if (S.screenType === 'asteroids') {
+    updateFloatingAsteroids(dt);
+  }
+
+  // Ondas de choque
+  for (const sw of shockwaves) {
+    sw.r += dt * 340;
+    sw.alpha = Math.max(0, 1 - sw.r / sw.maxR);
+  }
+  shockwaves = shockwaves.filter(sw => sw.alpha > 0);
+
+  // Chispas de plasma
+  for (const spk of sparks) {
+    spk.x += spk.vx * dt;
+    spk.y += spk.vy * dt;
+    spk.life -= dt;
+  }
+  sparks = sparks.filter(spk => spk.life > 0);
+
+  if (lastImpactNormal) {
+    lastImpactNormal.timer -= dt / 1.1;
+    if (lastImpactNormal.timer <= 0) lastImpactNormal = null;
+  }
+
+  updateMeteors(dt);
+
+  if (holdServe > 0) {
+    holdServe -= dt;
+    return;
+  }
+
+  updatePowerUps(dt);
+
+  for (const b of balls.slice()) {
+    updateBall(b, dt);
+  }
+
+  if (S.gameMode === 'challenges' && S.challengeId === 3 && wells.some(w => w.k === 2)) {
+    challengeProgress.blackHoleSurvivalTime += dt;
+    updateChallengeBanner();
+    if (challengeProgress.blackHoleSurvivalTime >= 25 && !challengeProgress.goalConceded) {
+      completeChallenge('¡Has sobrevivido a las fuerzas de marea del agujero negro!');
+    }
+  }
+}
+
+function updateBall(b, dt) {
+  if (b.fire > 0) {
+    b.fire -= dt;
+    for (let i = 0; i < 2; i++) {
+      particles.push({
+        x: b.x, y: b.y,
+        vx: -b.vx * 0.15 + (Math.random() - 0.5) * 80,
+        vy: -b.vy * 0.15 + (Math.random() - 0.5) * 80 - 30,
+        life: 0.45
+      });
+    }
+  }
+
+  const f = S.fld ? calculateField(b.x, b.y, b.vx, b.vy) : { ax: 0, ay: 0 };
+  b.idle = (b.idle || 0) + dt;
+  const fieldScale = b.idle > 3.5 ? Math.max(0, 1 - (b.idle - 3.5)) : 1;
+
+  b.vx += (f.ax * fieldScale - K_MAGNUS * b.w * b.vy) * dt;
+  b.vy += (f.ay * fieldScale + K_MAGNUS * b.w * b.vx) * dt;
+
+  const currentSpeed = Math.hypot(b.vx, b.vy);
+  if (currentSpeed < 340) {
+    const boost = Math.min(1.15, 340 / currentSpeed);
+    b.vx *= boost; b.vy *= boost;
+  } else if (currentSpeed > 1350) {
+    b.vx *= 1350 / currentSpeed; b.vy *= 1350 / currentSpeed;
+  }
+  if (b.idle > 4.5 && Math.abs(b.vx) < 380) b.vx = (b.vx < 0 ? -1 : 1) * 380;
+
+  // Catapulta gravitatoria
+  for (const w of wells) {
+    if ((w.k === 0 || w.k === 2) && getWellStrength(w) > 0.3 && Math.hypot(b.x - w.x, b.y - w.y) < (w.k === 2 ? 30 : 18)) {
+      const angle = (Math.random() - 0.5) * 1.2;
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      b.vx = dir * 550 * Math.cos(angle);
+      b.vy = 550 * Math.sin(angle);
+      b.x = w.x + dir * 30;
+      b.y = w.y;
+      b.idle = 0;
+      addShockwave(w.x, w.y, 140, '#ff9f1c');
+      popText('¡CATAPULTA GRAVITATORIA!', '#ff9f1c');
+
+      if (S.gameMode === 'challenges' && S.challengeId === 1) {
+        const catapultSpeed = Math.hypot(b.vx, b.vy);
+        challengeProgress.maxSlingshotSpeed = Math.max(challengeProgress.maxSlingshotSpeed, catapultSpeed);
+        updateChallengeBanner();
+      }
+    }
+  }
+
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
+  b.w *= Math.exp(-0.2 * dt);
+  b.angle += b.w * dt;
+
+  b.trail.push({ x: b.x, y: b.y });
+  if (b.trail.length > 38) b.trail.shift();
+
+  if (b.y < BALL_R && b.vy < 0) {
+    b.y = BALL_R;
+    handleBounce(b, 0, 1, 0, 0.05, 0.98, b.x, 0);
+  }
+  if (b.y > GAME_H - BALL_R && b.vy > 0) {
+    b.y = GAME_H - BALL_R;
+    handleBounce(b, 0, -1, 0, 0.05, 0.98, b.x, GAME_H);
+  }
+
+  for (let i = 0; i < 2; i++) {
+    const p = paddles[i];
+    const px = i === 1 ? GAME_W - PADDLE_X : PADDLE_X;
+    const dir = i === 1 ? -1 : 1;
+
+    if ((i === 1 ? b.vx > 0 : b.vx < 0) &&
+        Math.abs(b.y - p.y) < PADDLE_H / 2 + BALL_R * 0.7 &&
+        Math.abs(b.x - px) < PADDLE_W / 2 + BALL_R) {
+
+      const offsetNorm = clamp((b.y - p.y) / (PADDLE_H / 2), -1, 1) * 0.5;
+      b.x = px + dir * (PADDLE_W / 2 + BALL_R);
+
+      handleBounce(b, dir * Math.cos(offsetNorm), Math.sin(offsetNorm), p.vy, 0.12, 1.08, px + dir * (PADDLE_W / 2), b.y, true, i);
+
+      const sp = Math.hypot(b.vx, b.vy);
+      const cap = b.fire > 0 ? 1150 : 850;
+      if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
+      if (Math.abs(b.vx) < 240) b.vx = dir * 240;
+      screenShake = 4.5;
+      b.idle = 0;
+
+      if (i === 0 && S.gameMode === 'challenges' && S.challengeId === 2) {
+        challengeProgress.maxMagnusSpin = Math.max(challengeProgress.maxMagnusSpin, Math.abs(b.w));
+        updateChallengeBanner();
+      }
+    }
+  }
+
+  if (b.x < -20) {
+    score[1]++;
+    addShockwave(20, b.y, 160, '#ff4d8d');
+    if (S.gameMode === 'challenges') challengeProgress.goalConceded = true;
+    ballOut(1);
+  } else if (b.x > GAME_W + 20) {
+    score[0]++;
+    addShockwave(GAME_W - 20, b.y, 160, '#4cc9f0');
+    if (S.gameMode === 'challenges') {
+      if (S.challengeId === 1 && challengeProgress.maxSlingshotSpeed >= 750) {
+        completeChallenge('¡Has anotado aprovechando la aceleración de gravedad!');
+      } else if (S.challengeId === 2 && challengeProgress.maxMagnusSpin >= 14) {
+        completeChallenge('¡Golazo curvo con rotación angular extrema!');
+      }
+    }
+    ballOut(0);
+  }
+}
+
+function ballOut(scorer) {
+  triggerSFX('score');
+  balls = balls.filter(b => b.x >= -20 && b.x <= GAME_W + 20);
+  matchStats['p' + (scorer + 1)].goals++;
+  matchStats.currentRally = 0;
+  checkGameOver(scorer);
+}
+
+function checkGameOver(scorer) {
+  if (score[scorer] >= WIN_SCORE) {
+    S.run = 0;
+    triggerSFX('win');
+    showMatchStats(scorer);
+  } else if (!balls.length) {
+    serveBall(scorer ? -1 : 1);
+  }
+}
+
+function showMatchStats(winnerIdx) {
+  const isP1 = winnerIdx === 0;
+  const winnerName = isP1 ? 'JUGADOR 1' : (S.players === 1 ? 'LA IA' : 'JUGADOR 2');
+  const winnerColor = isP1 ? '#4cc9f0' : '#ff4d8d';
+
+  const titleEl = document.getElementById('statsWinnerText');
+  titleEl.textContent = `¡VICTORIA DE ${winnerName}!`;
+  titleEl.style.textShadow = `0 0 18px ${winnerColor}`;
+
+  document.getElementById('statScoreP1').textContent = score[0];
+  document.getElementById('statScoreP2').textContent = score[1];
+  document.getElementById('statTeamNameP2').textContent = S.players === 1 ? 'IA' : 'JUGADOR 2';
+
+  const p1 = matchStats.p1;
+  const p2 = matchStats.p2;
+
+  const setStat = (id1, id2, v1, v2, suffix = '') => {
+    const el1 = document.getElementById(id1);
+    const el2 = document.getElementById(id2);
+    el1.textContent = v1 + suffix;
+    el2.textContent = v2 + suffix;
+    if (v1 > v2) {
+      el1.classList.add('highlight');
+      el2.classList.remove('highlight');
+    } else if (v2 > v1) {
+      el2.classList.add('highlight');
+      el1.classList.remove('highlight');
+    } else {
+      el1.classList.remove('highlight');
+      el2.classList.remove('highlight');
+    }
+  };
+
+  setStat('statGoalsP1', 'statGoalsP2', score[0], score[1]);
+  setStat('statComboP1', 'statComboP2', p1.maxCombo, p2.maxCombo);
+  setStat('statSmashP1', 'statSmashP2', p1.smashes, p2.smashes);
+  setStat('statMagnusP1', 'statMagnusP2', p1.magnusHits, p2.magnusHits);
+  setStat('statSpeedP1', 'statSpeedP2', Math.round(p1.maxSpeed * 1.8), Math.round(p2.maxSpeed * 1.8), ' km/h');
+  setStat('statPowerUpsP1', 'statPowerUpsP2', p1.powerUps, p2.powerUps);
+  setStat('statAnglesP1', 'statAnglesP2', p1.notableAngles, p2.notableAngles);
+
+  document.getElementById('matchStatsModal').hidden = false;
+}
+
+function completeChallenge(desc) {
+  S.run = 0;
+  triggerSFX('challengeWin');
+  popText('¡RETO SUPERADO!', '#ffd166', true);
+  document.getElementById('msg').innerHTML = `<b style="color:var(--gold);">🎯 ¡RETO SUPERADO!</b><br>${desc}`;
+  document.getElementById('btnPlay').textContent = 'SIGUIENTE RETO';
+  document.getElementById('menu').hidden = false;
+  showStep(3);
+}
+
+function serveBall(dir) {
+  balls = [{
+    x: GAME_W / 2, y: GAME_H / 2,
+    vx: dir * 350, vy: (Math.random() - 0.5) * 220,
+    w: 0, angle: 0, trail: [], fire: 0,
+    lastHitter: dir > 0 ? 0 : 1
+  }];
+  holdServe = 0.8;
+  lastImpactNormal = null;
+}
+
+function getBlackHoleForce(px, py) {
+  let ax = 0, ay = 0;
+  for (const w of wells) {
+    if (w.k === 2) {
+      const s = getWellStrength(w);
+      const dx = w.x - px, dy = w.y - py;
+      const f = (2.4e7 * s) / Math.pow(dx * dx + dy * dy + 3000, 1.5);
+      ax += dx * f - dy * f * 0.45;
+      ay += dy * f + dx * f * 0.45;
+    }
+  }
+  return { ax, ay };
+}
+
+// Power-ups
+function updatePowerUps(dt) {
+  for (const w of wells) {
+    if (w.k === 2 && Math.random() < 0.7) {
+      const a = Math.random() * 6.283, r = 110 + Math.random() * 90;
+      particles.push({
+        x: w.x + Math.cos(a) * r, y: w.y + Math.sin(a) * r,
+        vx: -Math.sin(a) * 170, vy: Math.cos(a) * 170,
+        life: 1.5, scale: 0.22
+      });
+    }
+  }
+
+  for (const p of particles) {
+    if (p.scale) {
+      const a = getBlackHoleForce(p.x, p.y);
+      p.vx += a.ax * dt * 1.5; p.vy += a.ay * dt * 1.5;
+      for (const w of wells) if (w.k === 2 && Math.hypot(w.x - p.x, w.y - p.y) < 22) p.life = 0;
+    }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  if (!S.pw) return;
+
+  timeNextPowerUp -= dt;
+  if (timeNextPowerUp <= 0) {
+    timeNextPowerUp = 11 + Math.random() * 6;
+    if (!powerUp) {
+      triggerSFX('puSpawn');
+      powerUp = {
+        x: 230 + Math.random() * 340, y: 80 + Math.random() * 290,
+        type: Math.floor(Math.random() * 3), age: 0
+      };
+      addShockwave(powerUp.x, powerUp.y, 60, '#a78bfa');
+    }
+  }
+
+  if (powerUp) {
+    powerUp.age += dt;
+    if (powerUp.age > 13) powerUp = null;
+    else {
+      for (const b of balls) {
+        if (Math.hypot(b.x - powerUp.x, b.y - powerUp.y) < BALL_R + 36) {
+          applyPowerUp(powerUp.type, b);
+          powerUp = null;
+          break;
+        }
+      }
+    }
+  }
+}
+
+function applyPowerUp(type, ball) {
+  if (ball && ball.lastHitter !== undefined && ball.lastHitter >= 0) {
+    const pKey = ball.lastHitter === 0 ? 'p1' : 'p2';
+    matchStats[pKey].powerUps++;
+  }
+
+  if (type === 0) {
+    wells.push({
+      x: clamp(GAME_W / 2 + (Math.random() - 0.5) * 200, 220, 580),
+      y: clamp(GAME_H / 2 + (Math.random() - 0.5) * 160, 110, 340),
+      k: 2, age: 0, life: 9
+    });
+    addShockwave(GAME_W / 2, GAME_H / 2, 200, '#7b2ff7');
+    popText('¡AGUJERO NEGRO!', '#7b2ff7', true);
+    screenShake = 10;
+  } else if (type === 1) {
+    ball.fire = 7;
+    const sp = Math.hypot(ball.vx, ball.vy);
+    const m = Math.min(2, 1150 / sp);
+    ball.vx *= m; ball.vy *= m;
+    addShockwave(ball.x, ball.y, 120, '#ff3d00');
+    popText('¡POWER-UP 2×!', '#ff3d00', true);
+    screenShake = 8;
+  } else if (balls.length < 3) {
+    balls.push({
+      x: ball.x, y: ball.y,
+      vx: ball.vx, vy: -ball.vy * 0.8 + (Math.random() - 0.5) * 120,
+      w: -ball.w, angle: 0, trail: [], fire: 0, isDoppler: true
+    });
+    addShockwave(ball.x, ball.y, 90, '#00b4d8');
+    popText('¡ONDA DOPPLER!', '#00b4d8', true);
+  }
+}
+
+// Generador de asteroides poligonales procedurales
+function makeAsteroidPoints(r, num = 8) {
+  const pts = [];
+  for (let i = 0; i < num; i++) {
+    const a = (i / num) * Math.PI * 2;
+    const rad = r * (0.75 + Math.random() * 0.45);
+    pts.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad });
+  }
+  return pts;
+}
+
+function updateMeteors(dt) {
+  const alrEl = document.getElementById('alr');
+  if (!S.met) {
+    meteorShower.phase = 0; meteorShower.timer = 55; meteors = [];
+    alrEl.hidden = true;
+    return;
+  }
+
+  if (meteorShower.phase === 0) {
+    meteorShower.timer -= dt;
+    if (meteorShower.timer <= 0) {
+      meteorShower.phase = 1;
+      meteorShower.timer = 5;
+      meteorShower.dirAngle = Math.random() * 6.283;
+      triggerSFX('alert');
+    }
+  } else if (meteorShower.phase === 1) {
+    const prevSec = Math.ceil(meteorShower.timer);
+    meteorShower.timer -= dt;
+    if (Math.ceil(meteorShower.timer) < prevSec && meteorShower.timer > 0) triggerSFX('alert');
+    if (meteorShower.timer <= 0) {
+      meteorShower.phase = 2;
+      meteorShower.timer = S.screenType === 'asteroids' ? 9 : 6;
+      meteorShower.spawnTimer = 0;
+      popText('¡LLUVIA DE METEOROS!', '#ff5a1f', true);
+    }
+  } else {
+    meteorShower.timer -= dt;
+    meteorShower.spawnTimer -= dt;
+    if (meteorShower.spawnTimer <= 0 && meteorShower.timer > 1) {
+      meteorShower.spawnTimer = S.screenType === 'asteroids' ? 0.14 : 0.22;
+      spawnMeteor();
+    }
+    if (meteorShower.timer <= 0 && !meteors.length) {
+      meteorShower.phase = 0;
+      meteorShower.timer = S.screenType === 'asteroids' ? 24 : 50;
+    }
+  }
+
+  alrEl.hidden = meteorShower.phase !== 1;
+  if (meteorShower.phase === 1) alrEl.textContent = `¡ALERTA! Lluvia de meteoros en ${Math.ceil(meteorShower.timer)}…`;
+
+  for (const m of meteors) {
+    const a = getBlackHoleForce(m.x, m.y);
+    m.vx += a.ax * dt; m.vy += a.ay * dt;
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    m.rot += m.rotSpeed * dt;
+    m.age += dt;
+
+    for (const b of balls) {
+      const dx = b.x - m.x, dy = b.y - m.y, d = Math.hypot(dx, dy), totalR = m.r + BALL_R;
+      if (d < totalR && d > 0) {
+        const nx = dx / d, ny = dy / d;
+        const vr = (b.vx - m.vx) * nx + (b.vy - m.vy) * ny;
+        if (vr < 0) {
+          const M = m.r / 4, j = (-1.9 * vr) / (1 + 1 / M);
+          b.w = clamp(b.w + ((b.vx - m.vx) * -ny + (b.vy - m.vy) * nx) * 0.02, -30, 30);
+          b.vx += j * nx; b.vy += j * ny;
+          m.vx -= (j / M) * nx; m.vy -= (j / M) * ny;
+          b.x = m.x + nx * (totalR + 1); b.y = m.y + ny * (totalR + 1);
+          lastImpactNormal = { x: m.x + nx * m.r, y: m.y + ny * m.r, nx, ny, timer: 1.0 };
+          screenShake = 6;
+          addShockwave(m.x, m.y, 80, '#ff8a00');
+          triggerSFX('rock');
+        }
+      }
+    }
+  }
+  meteors = meteors.filter(m => m.age < 0.6 || (m.x > -200 && m.x < GAME_W + 200 && m.y > -200 && m.y < GAME_H + 200));
+}
+
+function spawnMeteor() {
+  const a = meteorShower.dirAngle + (Math.random() - 0.5) * 0.36;
+  const ux = Math.cos(meteorShower.dirAngle), uy = Math.sin(meteorShower.dirAngle);
+  const sp = 520 + Math.random() * 260, offset = (Math.random() * 2 - 1) * 320;
+  const r = 9 + Math.random() * 12;
+
+  meteors.push({
+    x: GAME_W / 2 - ux * 520 - uy * offset,
+    y: GAME_H / 2 - uy * 520 + ux * offset,
+    vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+    r,
+    polygon: makeAsteroidPoints(r, 8),
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 6,
+    age: 0
+  });
+}
+
+// --- MECÁNICA DE NEBULOSA ALIEN: OVNI Y LÁSER PARALIZADOR ---
+function updateUFO(dt) {
+  if (!ufo) return;
+  ufo.x += ufo.vx * dt;
+  ufo.y += ufo.vy * dt;
+  ufo.rot += dt * 3.5;
+
+  // Área de patrulla central
+  if (ufo.x < 240 && ufo.vx < 0) ufo.vx = Math.abs(ufo.vx);
+  if (ufo.x > 560 && ufo.vx > 0) ufo.vx = -Math.abs(ufo.vx);
+  if (ufo.y < 70 && ufo.vy < 0) ufo.vy = Math.abs(ufo.vy);
+  if (ufo.y > 380 && ufo.vy > 0) ufo.vy = -Math.abs(ufo.vy);
+
+  // Rebote elástico de la pelota contra el OVNI
+  for (const b of balls) {
+    const dx = b.x - ufo.x, dy = b.y - ufo.y, d = Math.hypot(dx, dy);
+    const minDist = ufo.r + BALL_R;
+    if (d < minDist && d > 0) {
+      const nx = dx / d, ny = dy / d;
+      const vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) {
+        b.vx -= 2 * vn * nx;
+        b.vy -= 2 * vn * ny;
+        b.x = ufo.x + nx * (minDist + 1);
+        b.y = ufo.y + ny * (minDist + 1);
+        addShockwave(ufo.x, ufo.y, 65, '#00f5d4');
+        triggerSFX('catapult');
+        popText('¡ESCUDO OVNI!', '#00f5d4');
+      }
+    }
+  }
+
+  // Disparo de rayo láser EMP hacia una pala
+  ufo.shootTimer -= dt;
+  if (ufo.shootTimer <= 1.0 && ufo.shootTimer > 0) {
+    ufo.charging = 1.0 - ufo.shootTimer; // 0 a 1
+    if (paddles[0].paralyzedTimer > 0) ufo.targetIdx = 1;
+    else if (paddles[1].paralyzedTimer > 0) ufo.targetIdx = 0;
+  } else if (ufo.shootTimer <= 0) {
+    const targetX = ufo.targetIdx === 0 ? PADDLE_X : GAME_W - PADDLE_X;
+    const targetY = paddles[ufo.targetIdx].y;
+    const dx = targetX - ufo.x, dy = targetY - ufo.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const laserSpeed = 460;
+
+    alienLasers.push({
+      x: ufo.x,
+      y: ufo.y,
+      vx: (dx / dist) * laserSpeed,
+      vy: (dy / dist) * laserSpeed,
+      targetIdx: ufo.targetIdx,
+      life: 2.2
+    });
+
+    playTone(720, 0.2, 'sawtooth', 0.12, 160);
+    addShockwave(ufo.x, ufo.y, 45, '#00f5d4');
+    ufo.charging = 0;
+    ufo.shootTimer = 4.0 + Math.random() * 2.5;
+    ufo.targetIdx = Math.random() < 0.5 ? 0 : 1;
+  }
+}
+
+function updateAlienLasers(dt) {
+  for (const l of alienLasers) {
+    l.x += l.vx * dt;
+    l.y += l.vy * dt;
+    l.life -= dt;
+
+    if (Math.random() < 0.35) {
+      sparks.push({
+        x: l.x, y: l.y,
+        vx: -l.vx * 0.1 + (Math.random() - 0.5) * 40,
+        vy: -l.vy * 0.1 + (Math.random() - 0.5) * 40,
+        life: 0.2,
+        color: '#00f5d4'
+      });
+    }
+
+    const p = paddles[l.targetIdx];
+    const px = l.targetIdx === 0 ? PADDLE_X : GAME_W - PADDLE_X;
+    if (Math.abs(l.x - px) < PADDLE_W / 2 + 10 && Math.abs(l.y - p.y) < PADDLE_H / 2 + 6) {
+      // Impacto: paralizar 3 segundos
+      p.paralyzedTimer = 3.0;
+      l.life = 0;
+      addShockwave(px, p.y, 90, '#00f5d4');
+      screenShake = 6.5;
+      playNoise(0.4, 0.22, 1200);
+      playTone(180, 0.45, 'sawtooth', 0.15, 60);
+
+      for (let k = 0; k < 18; k++) {
+        sparks.push({
+          x: px,
+          y: p.y + (Math.random() - 0.5) * PADDLE_H,
+          vx: (Math.random() - 0.5) * 220,
+          vy: (Math.random() - 0.5) * 220,
+          life: 0.5,
+          color: '#00f5d4'
+        });
+      }
+
+      popText('¡PALA PARALIZADA 3s!', '#00f5d4', true);
+    }
+  }
+  alienLasers = alienLasers.filter(l => l.life > 0 && l.x > -50 && l.x < GAME_W + 50 && l.y > -50 && l.y < GAME_H + 50);
+}
+
+// --- MECÁNICA DE CINTURÓN DE ASTEROIDES: 4 ASTEROIDES FLOTANTES LENTOS ---
+function updateFloatingAsteroids(dt) {
+  for (let i = 0; i < floatingAsteroids.length; i++) {
+    const a = floatingAsteroids[i];
+
+    // Atracción gravitatoria de agujeros negros sobre los asteroides
+    const bhForce = getBlackHoleForce(a.x, a.y);
+    a.vx += bhForce.ax * dt * 0.9;
+    a.vy += bhForce.ay * dt * 0.9;
+
+    // Límite de velocidad en órbita
+    const sp = Math.hypot(a.vx, a.vy);
+    if (sp > 380) {
+      a.vx *= 380 / sp;
+      a.vy *= 380 / sp;
+    }
+
+    // Devorado por el agujero negro
+    for (const w of wells) {
+      if (w.k === 2 && getWellStrength(w) > 0.2) {
+        const dist = Math.hypot(w.x - a.x, w.y - a.y);
+        if (dist < 28) {
+          addShockwave(w.x, w.y, 140, '#ff4d8d');
+          triggerSFX('blackHole');
+          screenShake = Math.max(screenShake, 8);
+          popText('¡ASTEROIDE DEVORADO!', '#ff4d8d', true);
+
+          a.x = Math.random() < 0.5 ? 130 : GAME_W - 130;
+          a.y = 80 + Math.random() * (GAME_H - 160);
+          a.vx = (a.x < GAME_W / 2 ? 1 : -1) * (25 + Math.random() * 30);
+          a.vy = (Math.random() - 0.5) * 40;
+          a.polygon = makeAsteroidPoints(a.r, 9);
+        }
+      }
+    }
+
+    a.x += a.vx * dt;
+    a.y += a.vy * dt;
+    a.rot += a.rotSpeed * dt;
+
+    if (a.y < a.r && a.vy < 0) { a.y = a.r; a.vy = -a.vy; }
+    if (a.y > GAME_H - a.r && a.vy > 0) { a.y = GAME_H - a.r; a.vy = -a.vy; }
+
+    const minX = 110 + a.r, maxX = GAME_W - 110 - a.r;
+    if (a.x < minX && a.vx < 0) { a.x = minX; a.vx = -a.vx; }
+    if (a.x > maxX && a.vx > 0) { a.x = maxX; a.vx = -a.vx; }
+
+    // Colisión entre asteroides
+    for (let j = i + 1; j < floatingAsteroids.length; j++) {
+      const b = floatingAsteroids[j];
+      const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy);
+      const minDist = a.r + b.r;
+      if (dist < minDist && dist > 0) {
+        const nx = dx / dist, ny = dy / dist;
+        const kx = a.vx - b.vx, ky = a.vy - b.vy;
+        const p = nx * kx + ny * ky;
+        if (p > 0) {
+          a.vx -= p * nx; a.vy -= p * ny;
+          b.vx += p * nx; b.vy += p * ny;
+          const overlap = (minDist - dist) * 0.5;
+          a.x -= nx * overlap; a.y -= ny * overlap;
+          b.x += nx * overlap; b.y += ny * overlap;
+          triggerSFX('rock');
+        }
+      }
+    }
+
+    // Colisión con la bola
+    for (const ball of balls) {
+      const dx = ball.x - a.x, dy = ball.y - a.y, dist = Math.hypot(dx, dy);
+      const minDist = a.r + BALL_R;
+      if (dist < minDist && dist > 0) {
+        const nx = dx / dist, ny = dy / dist;
+        const vr = (ball.vx - a.vx) * nx + (ball.vy - a.vy) * ny;
+        if (vr < 0) {
+          const j = -1.9 * vr;
+          ball.vx += j * nx;
+          ball.vy += j * ny;
+          a.vx -= j * 0.14 * nx;
+          a.vy -= j * 0.14 * ny;
+          ball.x = a.x + nx * (minDist + 1);
+          ball.y = a.y + ny * (minDist + 1);
+
+          ball.w = clamp(ball.w + ((ball.vx - a.vx) * -ny + (ball.vy - a.vy) * nx) * 0.02, -30, 30);
+          addShockwave(a.x + nx * a.r, a.y + ny * a.r, 70, '#ff9f1c');
+          screenShake = Math.max(screenShake, 4.0);
+          triggerSFX('rock');
+
+          for (let k = 0; k < 6; k++) {
+            sparks.push({
+              x: a.x + nx * a.r,
+              y: a.y + ny * a.r,
+              vx: nx * 100 + (Math.random() - 0.5) * 120,
+              vy: ny * 100 + (Math.random() - 0.5) * 120,
+              life: 0.35,
+              color: '#d4a373'
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+function drawUFO() {
+  if (!ufo) return;
+  ctx.save();
+  ctx.translate(ufo.x, ufo.y);
+
+  // Línea de telégrafo/apuntado
+  if (ufo.charging > 0) {
+    const targetX = ufo.targetIdx === 0 ? PADDLE_X : GAME_W - PADDLE_X;
+    const targetY = paddles[ufo.targetIdx].y;
+    ctx.save();
+    ctx.setTransform(ctx.getTransform());
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = `rgba(0, 245, 212, ${0.3 + ufo.charging * 0.7})`;
+    ctx.lineWidth = 1.5 + ufo.charging * 2.5;
+    ctx.shadowColor = '#00f5d4';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(ufo.x, ufo.y);
+    ctx.lineTo(targetX, targetY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Anillo de propulsión inferior
+  ctx.fillStyle = 'rgba(0, 245, 212, 0.45)';
+  ctx.shadowColor = '#00f5d4';
+  ctx.shadowBlur = 14;
+  ctx.beginPath();
+  ctx.ellipse(0, 7, ufo.r * 0.7, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Casco del platillo
+  ctx.fillStyle = '#111b33';
+  ctx.strokeStyle = '#00f5d4';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, ufo.r, ufo.r * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Luces perimetrales
+  const numLights = 6;
+  for (let i = 0; i < numLights; i++) {
+    const a = ufo.rot + (i / numLights) * Math.PI * 2;
+    const lx = Math.cos(a) * (ufo.r * 0.85);
+    const ly = 2 + Math.sin(a) * (ufo.r * 0.3);
+    ctx.fillStyle = (i % 2 === 0) ? '#00f5d4' : '#ff4d8d';
+    ctx.beginPath();
+    ctx.arc(lx, ly, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cúpula bioluminiscente
+  const domeGrad = ctx.createRadialGradient(0, -6, 2, 0, -4, 12);
+  domeGrad.addColorStop(0, '#ffffff');
+  domeGrad.addColorStop(0.4, '#00f5d4');
+  domeGrad.addColorStop(1, '#0b3954');
+  ctx.fillStyle = domeGrad;
+  ctx.beginPath();
+  ctx.arc(0, -2, 11, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#00f5d4';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Cañón láser inferior
+  ctx.fillStyle = ufo.charging > 0 ? '#ffffff' : '#00f5d4';
+  ctx.shadowColor = '#00f5d4';
+  ctx.shadowBlur = ufo.charging > 0 ? 18 : 6;
+  ctx.beginPath();
+  ctx.arc(0, 6, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawAlienLasers() {
+  for (const l of alienLasers) {
+    ctx.save();
+    ctx.translate(l.x, l.y);
+    const angle = Math.atan2(l.vy, l.vx);
+    ctx.rotate(angle);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#00f5d4';
+    ctx.shadowColor = '#00f5d4';
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-14, -3, 28, 6, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+function drawFloatingAsteroids() {
+  for (const m of floatingAsteroids) {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.rotate(m.rot);
+
+    const grad = ctx.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 2, 0, 0, m.r);
+    grad.addColorStop(0, '#ba9f88');
+    grad.addColorStop(0.5, '#7d6857');
+    grad.addColorStop(1, '#3e3128');
+
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#a88f78';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 8;
+
+    ctx.beginPath();
+    if (m.polygon && m.polygon.length) {
+      ctx.moveTo(m.polygon[0].x, m.polygon[0].y);
+      for (let i = 1; i < m.polygon.length; i++) {
+        ctx.lineTo(m.polygon[i].x, m.polygon[i].y);
+      }
+      ctx.closePath();
+    } else {
+      ctx.arc(0, 0, m.r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#4a3b30';
+    ctx.beginPath();
+    ctx.arc(-m.r * 0.3, -m.r * 0.2, m.r * 0.24, 0, Math.PI * 2);
+    ctx.arc(m.r * 0.35, m.r * 0.25, m.r * 0.2, 0, Math.PI * 2);
+    ctx.arc(0, m.r * 0.4, m.r * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// --- RENDERIZADO VISUAL PROFESIONAL (SCI-FI ASSETS) ---
+function drawDeepGrid() {
+  const g = 25;
+  const minX = -350, maxX = GAME_W + 350;
+  const minY = -250, maxY = GAME_H + 250;
+  const nx = Math.round((maxX - minX) / g);
+  const ny = Math.round((maxY - minY) / g);
+
+  const V = [];
+
+  for (let j = 0; j <= ny; j++) {
+    for (let i = 0; i <= nx; i++) {
+      const origX = minX + i * g;
+      const origY = minY + j * g;
+      let px = origX, py = origY;
+
+      for (const w of wells) {
+        const s = getWellStrength(w);
+        const dx = w.x - px, dy = w.y - py;
+        const r2 = dx * dx + dy * dy;
+
+        if (w.k === 2) {
+          const r = Math.sqrt(r2) + 1;
+          const pull = Math.min(92, (24000 / (r2 + 2600))) * s;
+          px += (dx / r) * pull;
+          py += (dy / r) * pull;
+
+          const swirl = 1.7 * s * Math.exp(-r2 / 30000);
+          const c = Math.cos(swirl), sn = Math.sin(swirl);
+          const ox = px - w.x, oy = py - w.y;
+          px = w.x + ox * c - oy * sn;
+          py = w.y + ox * sn + oy * c;
+        } else if (w.k === 0) {
+          const f = Math.exp(-r2 / 24000) * s;
+          px += dx * 0.42 * f;
+          py += dy * 0.42 * f;
+        } else {
+          const f = Math.exp(-r2 / 24000) * s;
+          const th = w.k * 1.1 * f;
+          const c = Math.cos(th), sn = Math.sin(th);
+          const ox = -dx, oy = -dy;
+          px = w.x + ox * c - oy * sn;
+          py = w.y + ox * sn + oy * c;
+        }
+      }
+
+      const disp = Math.hypot(px - origX, py - origY);
+      const stress = Math.min(1.0, disp / 45);
+      V.push({ x: px, y: py, stress });
+    }
+  }
+
+  const cols = nx + 1;
+  ctx.lineWidth = 1;
+
+  let baseColor = 'rgba(76, 201, 240, 0.16)';
+  if (S.screenType === 'alien') baseColor = 'rgba(0, 245, 212, 0.15)';
+  else if (S.screenType === 'asteroids') baseColor = 'rgba(255, 159, 28, 0.16)';
+  else if (S.screenType === 'lab') baseColor = 'rgba(76, 201, 240, 0.24)';
+
+  for (let j = 0; j <= ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const p1 = V[j * cols + i];
+      const p2 = V[j * cols + i + 1];
+      const avg = (p1.stress + p2.stress) * 0.5;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+
+      if (avg > 0.12) {
+        ctx.strokeStyle = `rgba(${Math.floor(140 + avg * 115)}, ${Math.floor(60 + avg * 120)}, 255, ${0.22 + avg * 0.58})`;
+      } else {
+        ctx.strokeStyle = baseColor;
+      }
+      ctx.stroke();
+    }
+  }
+
+  for (let i = 0; i <= nx; i++) {
+    for (let j = 0; j < ny; j++) {
+      const p1 = V[j * cols + i];
+      const p2 = V[(j + 1) * cols + i];
+      const avg = (p1.stress + p2.stress) * 0.5;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+
+      if (avg > 0.12) {
+        ctx.strokeStyle = `rgba(${Math.floor(140 + avg * 115)}, ${Math.floor(60 + avg * 120)}, 255, ${0.22 + avg * 0.58})`;
+      } else {
+        ctx.strokeStyle = baseColor;
+      }
+      ctx.stroke();
+    }
+  }
+}
+
+// Renderizado de Pala Sci-Fi con Escudo de Plasma y Parálisis
+function drawSciFiPaddle(x, y, isRight, hitFlash, paralyzedTimer = 0) {
+  const dir = isRight ? -1 : 1;
+  const isParalyzed = paralyzedTimer > 0;
+  const themeColor = isParalyzed ? '#00f5d4' : (isRight ? '#ff4d8d' : '#4cc9f0');
+  const chassisColor = '#111728';
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // 1. Chasis mecánico posterior (perfectamente acoplado al escudo frontal)
+  const chassisX = dir > 0 ? -PADDLE_W : 0;
+  ctx.fillStyle = chassisColor;
+  ctx.strokeStyle = isParalyzed ? '#00f5d4' : '#25355e';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(chassisX, -PADDLE_H / 2, PADDLE_W, PADDLE_H, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  // 2. Emisores magnéticos en los extremos
+  ctx.fillStyle = themeColor;
+  ctx.shadowColor = themeColor;
+  ctx.shadowBlur = isParalyzed ? 16 : 10;
+  ctx.fillRect(chassisX - 2, -PADDLE_H / 2 - 2, PADDLE_W + 4, 5);
+  ctx.fillRect(chassisX - 2, PADDLE_H / 2 - 3, PADDLE_W + 4, 5);
+  ctx.shadowBlur = 0;
+
+  // 3. Hoja frontal del escudo de plasma (en X = 0, cara de contacto)
+  const frontX = 0;
+  const glowIntensity = isParalyzed ? 25 : (12 + hitFlash * 22);
+  ctx.strokeStyle = (hitFlash > 0.1 || isParalyzed) ? '#ffffff' : themeColor;
+  ctx.shadowColor = themeColor;
+  ctx.shadowBlur = glowIntensity;
+  ctx.lineWidth = (isParalyzed ? 4.5 : 3.5) + hitFlash * 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(frontX, -PADDLE_H / 2 + 6);
+  ctx.lineTo(frontX, PADDLE_H / 2 - 6);
+  ctx.stroke();
+
+  // Filamento interno blanco
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(frontX, -PADDLE_H / 2 + 10);
+  ctx.lineTo(frontX, PADDLE_H / 2 - 10);
+  ctx.stroke();
+
+  // 4. Efecto de electrocución / arcos de rayo si está paralizada
+  if (isParalyzed) {
+    ctx.strokeStyle = '#00f5d4';
+    ctx.shadowColor = '#00f5d4';
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 2;
+    for (let arc = 0; arc < 3; arc++) {
+      ctx.beginPath();
+      let currY = -PADDLE_H / 2 + 6;
+      ctx.moveTo(frontX, currY);
+      while (currY < PADDLE_H / 2 - 6) {
+        currY += 9 + Math.random() * 8;
+        const zigX = frontX + (Math.random() - 0.5) * 16;
+        ctx.lineTo(zigX, Math.min(PADDLE_H / 2 - 6, currY));
+      }
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+// Renderizado de la Bola / Núcleo Cuántico
+function drawSciFiBall(b) {
+  ctx.save();
+  const bh = wells.find(w => w.k === 2);
+  let bhLens = 0;
+  if (bh) {
+    const dx = bh.x - b.x, dy = bh.y - b.y;
+    bhLens = Math.max(0, 1 - Math.hypot(dx, dy) / 185) * getWellStrength(bh);
+    if (bhLens > 0) {
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Math.atan2(dy, dx));
+      ctx.scale(1 + bhLens * 1.35, Math.max(0.32, 1 - bhLens * 0.52));
+      ctx.translate(-b.x, -b.y);
+    }
+  }
+
+  const sMag = Math.min(1, Math.abs(b.w) / 20);
+  const sColor = b.w > 0 ? '#ff4dd2' : '#4cc9f0';
+
+  // 1. Estela cuántica suave (comet ribbon)
+  for (let i = 0; i < b.trail.length; i++) {
+    const pt = b.trail[i], p = i / b.trail.length;
+    ctx.fillStyle = sMag > 0.2
+      ? `rgba(${b.w > 0 ? '255, 77, 210' : '76, 201, 240'}, ${p * 0.38})`
+      : `rgba(255, 255, 255, ${p * 0.28})`;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, BALL_R * p * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 2. Anillos de rotación Magnus
+  if (sMag > 0.1) {
+    ctx.strokeStyle = ctx.shadowColor = sColor;
+    ctx.shadowBlur = 16 * sMag;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.5 + 0.5 * sMag;
+    for (let k = 0; k < 3; k++) {
+      const a = b.angle * 1.6 + k * 2.094;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, BALL_R + 6, a, a + 0.5 + sMag * 0.8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  // 3. Orbe con sombreado volumétrico 3D
+  const grad = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, BALL_R);
+  if (b.fire > 0) {
+    ctx.shadowColor = '#ff6a00';
+    ctx.shadowBlur = 25;
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#ffe49e');
+    grad.addColorStop(0.8, '#ff5a1f');
+    grad.addColorStop(1, '#d7263d');
+  } else {
+    ctx.shadowColor = '#4cc9f0';
+    ctx.shadowBlur = 14;
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.35, '#d0f4ff');
+    grad.addColorStop(0.85, '#4cc9f0');
+    grad.addColorStop(1, '#1b3a6b');
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 4. Retícula de rotación interna (ecuador y meridianos)
+  ctx.strokeStyle = b.fire > 0 ? '#ff3d00' : '#040817';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  for (let k = 0; k < 3; k++) {
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x + BALL_R * Math.cos(b.angle + k * 2.094), b.y + BALL_R * Math.sin(b.angle + k * 2.094));
+  }
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Renderizado de Agujero Negro Cinematográfico (Estilo Gargantúa)
+function drawSciFiBlackHole(w, s) {
+  if (s <= 0.005) return;
+  const t = performance.now() / 1000;
+  const R = 210 * s + 1;
+
+  // 1. Lente gravitacional de fondo (halo de fotones exterior)
+  let halo = ctx.createRadialGradient(w.x, w.y, 10, w.x, w.y, R);
+  halo.addColorStop(0, 'rgba(0,0,0,0.98)');
+  halo.addColorStop(0.25, 'rgba(25,5,50,0.65)');
+  halo.addColorStop(0.65, 'rgba(123,47,247,0.25)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(w.x, w.y, R, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Disco de acreción con brillo Doppler asimétrico
+  let diskGrad = ctx.createRadialGradient(w.x - 20, w.y, 25, w.x, w.y, R * 0.7);
+  diskGrad.addColorStop(0, 'rgba(255,240,160,0.85)');
+  diskGrad.addColorStop(0.2, 'rgba(255,140,40,0.7)');
+  diskGrad.addColorStop(0.5, 'rgba(180,50,255,0.35)');
+  diskGrad.addColorStop(1, 'rgba(123,47,247,0)');
+  ctx.fillStyle = diskGrad;
+  ctx.beginPath();
+  ctx.arc(w.x, w.y, R * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3. Filamentos de acreción espirales animados
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = `rgba(255, 195, 120, ${0.7 * s})`;
+  for (let k = 0; k < 5; k++) {
+    ctx.beginPath();
+    for (let r = 24; r <= R * 0.78; r += 4) {
+      const a = -t * 3.2 + k * 1.2566 + r * 0.04;
+      const px = w.x + r * Math.cos(a), py = w.y + r * Math.sin(a);
+      r === 24 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // 4. Anillo de distorsión gravitacional superior/inferior (Gargantua optics)
+  ctx.save();
+  ctx.translate(w.x, w.y);
+  ctx.rotate(0.32);
+  ctx.strokeStyle = `rgba(255, 225, 170, ${0.85 * s})`;
+  ctx.lineWidth = 4;
+  ctx.shadowColor = '#ffb347';
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 64 * s, 18 * s, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // 5. Esfera de fotones (halo blanco puro en el horizonte de sucesos)
+  ctx.strokeStyle = `rgba(255, 250, 240, ${s})`;
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = '#ffffff';
+  ctx.shadowBlur = 24;
+  ctx.beginPath();
+  ctx.arc(w.x, w.y, 25 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // 6. Singularidad pura (horizonte de sucesos negro absoluto)
+  ctx.fillStyle = '#000000';
+  ctx.beginPath();
+  ctx.arc(w.x, w.y, 22 * s, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Renderizado de Asteroide Poligonal con textura de cráteres
+function drawSciFiAsteroid(m) {
+  const sp = Math.hypot(m.vx, m.vy), ux = m.vx / sp, uy = m.vy / sp;
+  const trailLen = m.r * 8.5;
+
+  // 1. Estela ígnea de reentrada
+  const grad = ctx.createLinearGradient(m.x, m.y, m.x - ux * trailLen, m.y - uy * trailLen);
+  grad.addColorStop(0, 'rgba(255, 180, 60, 0.95)');
+  grad.addColorStop(0.35, 'rgba(255, 60, 0, 0.5)');
+  grad.addColorStop(1, 'rgba(100, 20, 0, 0)');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = m.r * 1.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(m.x, m.y);
+  ctx.lineTo(m.x - ux * trailLen, m.y - uy * trailLen);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // 2. Roca poligonal 3D con rotación
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  ctx.rotate(m.rot);
+
+  ctx.fillStyle = '#9e8c7c';
+  ctx.strokeStyle = '#5a493c';
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = '#ff8a00';
+  ctx.shadowBlur = 14;
+
+  ctx.beginPath();
+  if (m.polygon && m.polygon.length) {
+    ctx.moveTo(m.polygon[0].x, m.polygon[0].y);
+    for (let i = 1; i < m.polygon.length; i++) {
+      ctx.lineTo(m.polygon[i].x, m.polygon[i].y);
+    }
+    ctx.closePath();
+  } else {
+    ctx.arc(0, 0, m.r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Pequeños cráteres
+  ctx.fillStyle = '#6d5a4c';
+  ctx.beginPath();
+  ctx.arc(-m.r * 0.3, -m.r * 0.2, m.r * 0.25, 0, Math.PI * 2);
+  ctx.arc(m.r * 0.25, m.r * 0.3, m.r * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// Renderizado de Vórtice de Plasma / Campo Magnético
+function drawAlienPlasmaVortex(w, s) {
+  if (s <= 0.005) return;
+  const t = performance.now() / 1000;
+  const isPos = w.k > 0;
+  const colCore = isPos ? '#00f5d4' : '#c77dff';
+
+  ctx.save();
+  ctx.translate(w.x, w.y);
+
+  // 1. Anillo exterior del campo magnético
+  ctx.strokeStyle = colCore;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = colCore;
+  ctx.shadowBlur = Math.max(0, 14 * s);
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(0.1, 34 * s), 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 2. Tentáculos de plasma rotatorios (Lorentz twist)
+  ctx.lineWidth = 2.5;
+  const maxR = Math.max(8, 36 * s);
+  for (let k = 0; k < 4; k++) {
+    const a0 = t * (isPos ? 3.5 : -3.5) + k * (Math.PI / 2);
+    ctx.beginPath();
+    for (let r = 6; r <= maxR; r += 4) {
+      const a = a0 + r * 0.08;
+      const px = r * Math.cos(a), py = r * Math.sin(a);
+      r === 6 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // 3. Núcleo pulsante protegido (radio siempre >= 1)
+  const coreRadius = Math.max(1, (7 + Math.sin(t * 8) * 2) * s);
+  ctx.fillStyle = colCore;
+  ctx.beginPath();
+  ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 4. Glifo vectorial: ⊙ (campo saliente) o ⊗ (campo entrante)
+  if (s > 0.25) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + Math.max(10, Math.floor(18 * s)) + 'px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isPos ? '⊙' : '⊗', 0, 0);
+  }
+
+  ctx.restore();
+}
+
+// Renderizado de Power-up Holográfico Sci-Fi con Iconografía Vectorial
+function drawSciFiPowerUp(pu) {
+  const c = ['#a855f7', '#ff5722', '#00e5ff'][pu.type];
+  const t = performance.now() / 1000;
+  const pulse = Math.sin(t * 4);
+  const r = 24 + pulse * 2.5;
+
+  ctx.save();
+  ctx.translate(pu.x, pu.y);
+
+  // 1. Brackets de focalización holográfica [ ]
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = c;
+  ctx.shadowBlur = 10;
+  const bSize = r + 8;
+  const bArm = 7;
+  // Esquina superior izquierda
+  ctx.beginPath(); ctx.moveTo(-bSize + bArm, -bSize); ctx.lineTo(-bSize, -bSize); ctx.lineTo(-bSize, -bSize + bArm); ctx.stroke();
+  // Esquina superior derecha
+  ctx.beginPath(); ctx.moveTo(bSize - bArm, -bSize); ctx.lineTo(bSize, -bSize); ctx.lineTo(bSize, -bSize + bArm); ctx.stroke();
+  // Esquina inferior izquierda
+  ctx.beginPath(); ctx.moveTo(-bSize + bArm, bSize); ctx.lineTo(-bSize, bSize); ctx.lineTo(-bSize, bSize - bArm); ctx.stroke();
+  // Esquina inferior derecha
+  ctx.beginPath(); ctx.moveTo(bSize - bArm, bSize); ctx.lineTo(bSize, bSize); ctx.lineTo(bSize, bSize - bArm); ctx.stroke();
+
+  // 2. Anillo de contención rotatorio externo con marcas técnicas
+  ctx.save();
+  ctx.rotate(t * 1.8);
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // 3. Núcleo holográfico translúcido (burbuja de energía)
+  const sphereGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, r);
+  sphereGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+  sphereGrad.addColorStop(0.35, c + '44');
+  sphereGrad.addColorStop(1, 'rgba(4, 8, 23, 0.8)');
+  ctx.fillStyle = sphereGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. ICONOS VECTORIALES SEGÚN POWER-UP
+  if (pu.type === 0) {
+    // --- ICONO: AGUJERO NEGRO / SINGULARIDAD VORTEX ---
+    ctx.save();
+    ctx.rotate(t * 2.8);
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 2.4;
+    ctx.shadowColor = '#a855f7';
+    ctx.shadowBlur = 12;
+
+    for (let arm = 0; arm < 3; arm++) {
+      ctx.beginPath();
+      const aOffset = arm * (Math.PI * 2 / 3);
+      for (let rad = 3; rad <= 14; rad += 2) {
+        const angle = aOffset + rad * 0.28;
+        const ax = Math.cos(angle) * rad, ay = Math.sin(angle) * rad;
+        rad === 3 ? ctx.moveTo(ax, ay) : ctx.lineTo(ax, ay);
+      }
+      ctx.stroke();
+    }
+
+    // Singularidad central con anillo de fotones blanco
+    ctx.fillStyle = '#05030a';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+  } else if (pu.type === 1) {
+    // --- ICONO: HIPER-VELOCIDAD 2X / PROPULSIÓN CHEVRONS ---
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.8;
+    ctx.shadowColor = '#ff6a00';
+    ctx.shadowBlur = 14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Primer chevron
+    ctx.beginPath();
+    ctx.moveTo(-6, -9); ctx.lineTo(-1, 0); ctx.lineTo(-6, 9);
+    ctx.stroke();
+
+    // Segundo chevron
+    ctx.beginPath();
+    ctx.moveTo(1, -9); ctx.lineTo(7, 0); ctx.lineTo(1, 9);
+    ctx.stroke();
+
+    // Núcleo de llama/foco solar
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  } else {
+    // --- ICONO: ONDA DOPPLER / FOTONES ENTRELAZADOS ---
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 12;
+
+    // Frentes de onda comprimidos (Doppler shift)
+    for (let wave = 1; wave <= 3; wave++) {
+      const wr = wave * 4.8;
+      const offX = -wave * 2.2;
+      ctx.beginPath();
+      ctx.arc(offX, 0, wr, -Math.PI * 0.65, Math.PI * 0.65);
+      ctx.stroke();
+    }
+
+    // Dos partículas cuánticas entrelazadas
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(5, -4, 2.5, 0, Math.PI * 2);
+    ctx.arc(5, 4, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Etiqueta holográfica inferior
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 9px "Orbitron", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = c;
+  ctx.shadowBlur = 8;
+  ctx.fillText(['SINGULARITY', 'HYPER 2×', 'DOPPLER'][pu.type], 0, r + 9);
+
+  ctx.restore();
+}
+
+function drawTrajectoryPrediction(ball) {
+  let simX = ball.x, simY = ball.y, simVx = ball.vx, simVy = ball.vy, simW = ball.w;
+  const dt = 1 / 60;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(76, 201, 240, 0.55)';
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(simX, simY);
+
+  for (let s = 0; s < 32; s++) {
+    let ax = 0, ay = 0;
+    if (S.fld) {
+      const f = calculateField(simX, simY, simVx, simVy);
+      ax += f.ax; ay += f.ay;
+    }
+    ax += -K_MAGNUS * simW * simVy;
+    ay += K_MAGNUS * simW * simVx;
+    simVx += ax * dt; simVy += ay * dt;
+    simX += simVx * dt; simY += simVy * dt;
+
+    if (simY < BALL_R || simY > GAME_H - BALL_R) simVy = -simVy;
+    ctx.lineTo(simX, simY);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawArrow(x0, y0, dx, dy, color, label) {
+  if (Math.hypot(dx, dy) < 2) return;
+  ctx.save();
+  ctx.strokeStyle = ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(x0 + dx, y0 + dy);
+  ctx.stroke();
+
+  const a = Math.atan2(dy, dx), eX = x0 + dx, eY = y0 + dy;
+  ctx.beginPath();
+  ctx.moveTo(eX, eY);
+  ctx.lineTo(eX - 9 * Math.cos(a - 0.4), eY - 9 * Math.sin(a - 0.4));
+  ctx.lineTo(eX - 9 * Math.cos(a + 0.4), eY - 9 * Math.sin(a + 0.4));
+  ctx.fill();
+
+  if (label) {
+    ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, eX + 6, eY - 4);
+  }
+  ctx.restore();
+}
+
+function isPortraitMode() {
+  return window.innerHeight > window.innerWidth;
+}
+
+// --- RENDERIZADO GLOBAL DEL FRAME ---
+function render() {
+  const isPortrait = isPortraitMode();
+
+  if (isPortrait) {
+    if (canvas.width !== 900 || canvas.height !== 1600) {
+      canvas.width = 900; canvas.height = 1600;
+    }
+    ctx.setTransform(0, -2, 2, 0, 0, 1600);
+  } else {
+    if (canvas.width !== 1600 || canvas.height !== 900) {
+      canvas.width = 1600; canvas.height = 900;
+    }
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+  }
+
+  // 1. Fondo espacial y nebulosas
+  ctx.fillStyle = '#040817';
+  ctx.fillRect(-350, -250, GAME_W + 700, GAME_H + 500);
+
+  // Nebulosa ambiental suave
+  const t = performance.now() / 1000;
+  let neb1 = 'rgba(70, 20, 140, 0.14)', neb2 = 'rgba(20, 80, 180, 0.12)';
+  if (S.screenType === 'asteroids') { neb1 = 'rgba(180, 60, 20, 0.14)'; neb2 = 'rgba(100, 30, 10, 0.12)'; }
+  else if (S.screenType === 'alien') { neb1 = 'rgba(10, 140, 90, 0.14)'; neb2 = 'rgba(140, 20, 110, 0.12)'; }
+  else if (S.screenType === 'lab') { neb1 = 'rgba(15, 30, 70, 0.18)'; neb2 = 'rgba(10, 20, 45, 0.12)'; }
+
+  const nGrad = ctx.createRadialGradient(GAME_W * 0.4, GAME_H * 0.5, 40, GAME_W * 0.5, GAME_H * 0.5, 450);
+  nGrad.addColorStop(0, neb1);
+  nGrad.addColorStop(0.5, neb2);
+  nGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = nGrad;
+  ctx.fillRect(-350, -250, GAME_W + 700, GAME_H + 500);
+
+  // Planeta gaseoso distante con anillos
+  drawDistantPlanet(t);
+
+  // 2. Campo de estrellas titilantes (Twinkle Starfield)
+  for (const star of stars) {
+    const starAlpha = star.baseAlpha * (0.65 + 0.35 * Math.sin(t * star.speed + star.phase));
+    ctx.fillStyle = star.color;
+    ctx.globalAlpha = starAlpha;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Cometas y estrellas fugaces en el fondo
+  drawComets();
+
+  // 3. Screen shake
+  if (screenShake > 0.3) {
+    ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+    screenShake *= 0.88;
+  } else screenShake = 0;
+
+  // 4. Rejilla relativista
+  drawDeepGrid();
+
+  // 5. Ondas de choque radiales
+  for (const sw of shockwaves) {
+    ctx.strokeStyle = sw.color;
+    ctx.lineWidth = 2.5 * sw.alpha;
+    ctx.globalAlpha = sw.alpha;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // 6. Pozos, campos y agujeros negros
+  for (const w of wells) {
+    const s = getWellStrength(w);
+    if (w.k === 2) {
+      drawSciFiBlackHole(w, s);
+    } else if (w.k === 0) {
+      const r = 60 * s + 1;
+      const gr = ctx.createRadialGradient(w.x, w.y, 2, w.x, w.y, r);
+      gr.addColorStop(0, 'rgba(255,190,60,.9)');
+      gr.addColorStop(1, 'rgba(255,120,0,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, Math.max(0.1, 7 * s), 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      drawAlienPlasmaVortex(w, s);
+    }
+  }
+
+  // 6b. Entidades de Pantallas Temáticas
+  if (S.screenType === 'asteroids') {
+    drawFloatingAsteroids();
+  }
+  if (S.screenType === 'alien') {
+    drawUFO();
+    drawAlienLasers();
+  }
+
+  // 7. Línea central
+  ctx.setLineDash([8, 10]);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.beginPath();
+  ctx.moveTo(GAME_W / 2, 0);
+  ctx.lineTo(GAME_W / 2, GAME_H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 8. Marcador
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.font = '64px Bangers, Impact, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(score[0], GAME_W / 2 - 70, 72);
+  ctx.fillText(score[1], GAME_W / 2 + 70, 72);
+
+  ctx.font = '13px "Space Grotesk", sans-serif';
+  ctx.fillText('J1', GAME_W / 2 - 70, 92);
+  ctx.fillText(S.players === 1 ? 'IA' : 'J2', GAME_W / 2 + 70, 92);
+
+  // 8b. Indicador de Racha / Rally Combo en tiempo real
+  if (matchStats && matchStats.currentRally >= 3) {
+    ctx.save();
+    const t = performance.now() / 1000;
+    const pulse = 1 + Math.sin(t * 8) * 0.06;
+    ctx.translate(GAME_W / 2, 74);
+    ctx.scale(pulse, pulse);
+    const comboColor = matchStats.currentRally >= 10 ? '#ff4d8d' : (matchStats.currentRally >= 5 ? '#ffd166' : '#4cc9f0');
+    ctx.fillStyle = comboColor;
+    ctx.shadowColor = comboColor;
+    ctx.shadowBlur = 12;
+    ctx.font = '800 13px "Orbitron", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`🔥 RALLY ×${matchStats.currentRally}`, 0, 0);
+    ctx.restore();
+  }
+
+  // 9. Palas Sci-Fi
+  for (let i = 0; i < 2; i++) {
+    const px = i === 1 ? GAME_W - PADDLE_X : PADDLE_X;
+    drawSciFiPaddle(px, paddles[i].y, i === 1, paddles[i].hitFlash, paddles[i].paralyzedTimer);
+  }
+
+  // 10. Chispas de impacto de plasma
+  for (const spk of sparks) {
+    ctx.fillStyle = spk.color;
+    ctx.globalAlpha = spk.life / 0.35;
+    ctx.beginPath();
+    ctx.arc(spk.x, spk.y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 11. Power-ups
+  if (powerUp) drawSciFiPowerUp(powerUp);
+
+  // 12. Partículas
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of particles) {
+    ctx.fillStyle = `rgba(255, ${Math.floor(80 + p.life * 350)}, 0, ${p.life * 1.2})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (3 + 12 * p.life) * (p.scale || 1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+
+  // 13. Bolas cuánticas
+  for (const b of balls) drawSciFiBall(b);
+
+  // 14. Meteoros poligonales
+  for (const m of meteors) drawSciFiAsteroid(m);
+
+  // 15. Vectores
+  for (const b of balls) {
+    if (S.vec) {
+      drawTrajectoryPrediction(b);
+      const f = S.fld ? calculateField(b.x, b.y, b.vx, b.vy) : { ax: 0, ay: 0 };
+      drawArrow(b.x, b.y, b.vx * 0.22, 0, '#ff6b6b', 'vₓ');
+      drawArrow(b.x, b.y, 0, b.vy * 0.22, '#ffd166', 'vᵧ');
+      drawArrow(b.x, b.y, b.vx * 0.22, b.vy * 0.22, '#4cf0a8', 'v⃗');
+      drawArrow(b.x, b.y, -K_MAGNUS * b.w * b.vy * 0.2, K_MAGNUS * b.w * b.vx * 0.2, '#ff4dd2', 'a⃗M');
+      if (S.fld) drawArrow(b.x, b.y, f.ax * 0.1, f.ay * 0.1, '#ff9f1c', 'F⃗');
+    }
+  }
+
+  if (lastImpactNormal && S.vec) {
+    ctx.globalAlpha = lastImpactNormal.timer;
+    drawArrow(lastImpactNormal.x, lastImpactNormal.y, lastImpactNormal.nx * 44, lastImpactNormal.ny * 44, '#ffffff', 'n̂');
+    ctx.globalAlpha = 1;
+  }
+
+  if (S.pause) {
+    ctx.fillStyle = '#fff';
+    ctx.font = '56px Bangers, Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSA', GAME_W / 2, GAME_H / 2);
+  }
+}
+
+// --- HUD MATEMÁTICO ---
+function updateHUD() {
+  const b = balls[0];
+  if (!b) return;
+
+  const sp = Math.hypot(b.vx, b.vy);
+  const ang = (Math.atan2(-b.vy, b.vx) * 57.2958).toFixed(1);
+  const f = S.fld ? calculateField(b.x, b.y, b.vx, b.vy) : { ax: 0, ay: 0 };
+  const mA = Math.hypot(-K_MAGNUS * b.w * b.vy, K_MAGNUS * b.w * b.vx);
+  const fA = Math.hypot(f.ax, f.ay);
+  const ke = (0.5 * sp * sp / 1000).toFixed(1);
+
+  document.getElementById('iv').textContent = sp.toFixed(0);
+  document.getElementById('ia').textContent = ang + '°';
+  document.getElementById('ix').textContent = b.vx.toFixed(0);
+  document.getElementById('iy').textContent = (-b.vy).toFixed(0);
+  document.getElementById('iw').textContent = (b.w > 0 ? '↻ ' : '↺ ') + Math.abs(b.w).toFixed(1);
+  document.getElementById('im').textContent = mA.toFixed(0);
+  document.getElementById('ig').textContent = fA.toFixed(0);
+  document.getElementById('ie').textContent = ke + ' kJ';
+
+  document.getElementById('eqLive').textContent = `a⃗ = ${K_MAGNUS}·(${b.w.toFixed(1)})·(−vᵧ, vₓ) + F⃗(${fA.toFixed(0)})`;
+}
+
+function updateChallengeBanner() {
+  const b = document.getElementById('challengeBanner');
+  if (S.gameMode !== 'challenges') {
+    b.classList.remove('visible');
+    return;
+  }
+  b.classList.add('visible');
+  const span = b.querySelector('span');
+
+  if (S.challengeId === 0) {
+    span.textContent = `Ángulos Notables: ${challengeProgress.notableAngleHits} / 2`;
+  } else if (S.challengeId === 1) {
+    span.textContent = `Tirachinas Vel: ${challengeProgress.maxSlingshotSpeed.toFixed(0)} / 750 km/h`;
+  } else if (S.challengeId === 2) {
+    span.textContent = `Efecto Magnus: |ω| = ${challengeProgress.maxMagnusSpin.toFixed(1)} / 14.0`;
+  } else if (S.challengeId === 3) {
+    span.textContent = `Supervivencia BH: ${challengeProgress.blackHoleSurvivalTime.toFixed(0)}s / 25s`;
+  }
+}
+
+function applyScreenAndModeConfig() {
+  if (S.gameMode === 'classic') {
+    S.fld = 0; S.pw = 0; S.met = 0; S.vec = 1;
+  } else if (S.gameMode === 'chaos') {
+    S.fld = 1; S.pw = 1; S.met = 1; S.vec = 1;
+  } else if (S.gameMode === 'challenges') {
+    S.vec = 1;
+    if (S.challengeId === 0) { S.fld = 0; S.pw = 0; S.met = 0; }
+    else if (S.challengeId === 1) { S.fld = 1; S.pw = 0; S.met = 0; }
+    else if (S.challengeId === 2) { S.fld = 0; S.pw = 1; S.met = 0; }
+    else if (S.challengeId === 3) { S.fld = 1; S.pw = 0; S.met = 0; }
+  } else {
+    if (S.screenType === 'lab') { S.fld = 0; S.pw = 0; S.met = 0; S.vec = 1; }
+    else if (S.screenType === 'asteroids') { S.fld = 0; S.pw = 1; S.met = 1; S.vec = 1; }
+    else if (S.screenType === 'alien') { S.fld = 1; S.pw = 1; S.met = 0; S.vec = 1; }
+    else { S.fld = 1; S.pw = 1; S.met = 1; S.vec = 1; }
+  }
+}
+
+// --- MENÚ Y NAVEGACIÓN ---
+function showStep(step) {
+  document.getElementById('step1').hidden = step !== 1;
+  document.getElementById('step2').hidden = step !== 2;
+  document.getElementById('step3').hidden = step !== 3;
+  document.getElementById('aiDifficultySection').style.display = S.players === 2 ? 'none' : 'block';
+}
+
+document.getElementById('btnMode1P').onclick = () => {
+  S.players = 1;
+  document.getElementById('btnMode1P').classList.add('selected');
+  document.getElementById('btnMode2P').classList.remove('selected');
+  showStep(2);
+};
+document.getElementById('btnMode2P').onclick = () => {
+  S.players = 2;
+  document.getElementById('btnMode2P').classList.add('selected');
+  document.getElementById('btnMode1P').classList.remove('selected');
+  showStep(2);
+};
+document.getElementById('btnStep1Next').onclick = () => showStep(2);
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    S.difficulty = parseInt(btn.dataset.diff, 10);
+  };
+});
+
+document.querySelectorAll('[data-screen]').forEach(card => {
+  card.onclick = () => {
+    document.querySelectorAll('[data-screen]').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    S.screenType = card.dataset.screen;
+    showStep(3);
+  };
+});
+document.getElementById('btnStep2Back').onclick = () => showStep(1);
+document.getElementById('btnStep2Next').onclick = () => showStep(3);
+
+document.querySelectorAll('[data-mode]').forEach(card => {
+  card.onclick = () => {
+    document.querySelectorAll('[data-mode]').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    S.gameMode = card.dataset.mode;
+    document.getElementById('challengesSubmenu').style.display = S.gameMode === 'challenges' ? 'block' : 'none';
+  };
+});
+
+document.querySelectorAll('[data-ch]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('[data-ch]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    S.challengeId = parseInt(btn.dataset.ch, 10);
+  };
+});
+document.getElementById('btnStep3Back').onclick = () => showStep(2);
+
+document.getElementById('btnPlay').onclick = () => {
+  getAudio();
+  applyScreenAndModeConfig();
+  startNewGame();
+};
+
+function startNewGame() {
+  score = [0, 0];
+  matchStats = {
+    p1: { goals: 0, maxCombo: 0, magnusHits: 0, smashes: 0, maxSpeed: 0, powerUps: 0, notableAngles: 0 },
+    p2: { goals: 0, maxCombo: 0, magnusHits: 0, smashes: 0, maxSpeed: 0, powerUps: 0, notableAngles: 0 },
+    currentRally: 0
+  };
+  paddles = [
+    { y: GAME_H / 2, vy: 0, targetY: null, hitFlash: 0, paralyzedTimer: 0 },
+    { y: GAME_H / 2, vy: 0, targetY: null, hitFlash: 0, paralyzedTimer: 0 }
+  ];
+  wells = [];
+  timeNextWell = 2.5;
+  powerUp = null;
+  particles = [];
+  shockwaves = [];
+  sparks = [];
+  meteors = [];
+  alienLasers = [];
+  floatingAsteroids = [];
+  ufo = null;
+  meteorShower = { phase: 0, timer: S.screenType === 'asteroids' ? 5 : 50, dirAngle: 0, spawnTimer: 0 };
+  timeNextPowerUp = 10 + Math.random() * 5;
+
+  // Inicializar entidades temáticas según la pantalla elegida
+  if (S.screenType === 'alien') {
+    ufo = {
+      x: GAME_W / 2,
+      y: 110,
+      vx: 55,
+      vy: 35,
+      r: 22,
+      shootTimer: 3.5,
+      charging: 0,
+      targetIdx: 0,
+      rot: 0
+    };
+  } else if (S.screenType === 'asteroids') {
+    const spawnPoints = [
+      { x: 260, y: 130 },
+      { x: 540, y: 130 },
+      { x: 300, y: 320 },
+      { x: 500, y: 320 }
+    ];
+    for (let i = 0; i < 4; i++) {
+      const sp = spawnPoints[i];
+      const r = 20 + Math.random() * 8;
+      const a = Math.random() * Math.PI * 2;
+      const speed = 25 + Math.random() * 25;
+      floatingAsteroids.push({
+        x: sp.x,
+        y: sp.y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        r,
+        polygon: makeAsteroidPoints(r, 9),
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 1.8
+      });
+    }
+  }
+
+  if (S.gameMode === 'challenges' && S.challengeId === 3) {
+    wells.push({ x: GAME_W / 2, y: GAME_H / 2, k: 2, age: 0, life: 99 });
+  }
+
+  challengeProgress.active = S.gameMode === 'challenges';
+  challengeProgress.notableAngleHits = 0;
+  challengeProgress.maxSlingshotSpeed = 0;
+  challengeProgress.maxMagnusSpin = 0;
+  challengeProgress.blackHoleSurvivalTime = 0;
+  challengeProgress.goalConceded = false;
+  updateChallengeBanner();
+
+  serveBall(1);
+  S.run = 1;
+  S.pause = 0;
+  document.getElementById('menu').hidden = true;
+  document.getElementById('opt').hidden = true;
+  document.getElementById('matchStatsModal').hidden = true;
+}
+
+// Estadísticas del Partido - Botones
+document.getElementById('btnStatsRematch').onclick = () => {
+  document.getElementById('matchStatsModal').hidden = true;
+  applyScreenAndModeConfig();
+  startNewGame();
+};
+
+document.getElementById('btnStatsMenu').onclick = () => {
+  document.getElementById('matchStatsModal').hidden = true;
+  document.getElementById('menu').hidden = false;
+  showStep(1);
+};
+
+// Botón de acceso rápido para Sonido y Dron Cósmico
+document.getElementById('btnAudioToggle').onclick = () => {
+  S.snd = S.snd ? 0 : 1;
+  document.getElementById('svgAudioOn').style.display = S.snd ? 'block' : 'none';
+  document.getElementById('svgAudioOff').style.display = S.snd ? 'none' : 'block';
+  if (S.snd) {
+    getAudio();
+    initSpaceDrone();
+  }
+  updateSpaceDroneVolume();
+};
+
+// Pausa
+document.getElementById('gear').onclick = () => {
+  if (!S.run || !document.getElementById('menu').hidden) return;
+  S.pause = 1;
+  document.getElementById('opt').hidden = false;
+};
+document.getElementById('btnResume').onclick = () => {
+  document.getElementById('opt').hidden = true;
+  S.pause = 0;
+};
+document.getElementById('btnMainMenu').onclick = () => {
+  S.pause = 1;
+  document.getElementById('opt').hidden = true;
+  document.getElementById('btnPlay').textContent = S.run ? 'NUEVA PARTIDA' : '¡JUGAR!';
+  document.getElementById('menu').hidden = false;
+  showStep(1);
+};
+document.getElementById('btnFullscreen').onclick = async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape').catch(() => {});
+      }
+    } else await document.exitFullscreen();
+  } catch (e) {}
+};
+
+// Toggles en Menú de Pausa
+const pauseTgs = document.querySelector('.opt-tgs');
+const TOGGLES_DATA = [
+  ['fld', 'Campos', '#ff9f1c'],
+  ['pw', 'Power-ups', '#a78bfa'],
+  ['met', 'Meteoros', '#ff5a5f'],
+  ['snd', 'Sonido', '#2ecc8f'],
+  ['vec', 'Vectores', '#4cc9f0']
+];
+pauseTgs.innerHTML = TOGGLES_DATA.map(t =>
+  `<button class="tg-btn ${S[t[0]] ? 'active' : ''}" data-t="${t[0]}" style="--c:${t[2]}">${t[1]}</button>`
+).join('');
+
+pauseTgs.querySelectorAll('.tg-btn').forEach(b => {
+  b.onclick = () => {
+    const k = b.dataset.t;
+    S[k] = S[k] ? 0 : 1;
+    b.classList.toggle('active', !!S[k]);
+    if (!S.fld) wells = wells.filter(w => w.k === 2);
+    if (!S.pw) powerUp = null;
+    if (k === 'snd') {
+      document.getElementById('svgAudioOn').style.display = S.snd ? 'block' : 'none';
+      document.getElementById('svgAudioOff').style.display = S.snd ? 'none' : 'block';
+      if (S.snd) { getAudio(); initSpaceDrone(); }
+      updateSpaceDroneVolume();
+    }
+  };
+});
+
+function popText(text, color = '#e0457b', force = false) {
+  const now = performance.now();
+  if (now - lastPopTime < 800 && !force) return;
+  lastPopTime = now;
+
+  const el = document.getElementById('pop');
+  el.textContent = text;
+  el.style.setProperty('--c', color);
+  el.className = '';
+  void el.offsetWidth;
+  el.className = 'go';
+}
+
+// Controles
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyP') if (S.run) S.pause = S.pause ? 0 : 1;
+  if (e.code === 'Escape') {
+    const opt = document.getElementById('opt');
+    opt.hidden ? (S.run && (S.pause = 1, opt.hidden = false)) : (opt.hidden = true, S.pause = 0);
+  }
+  if (e.code === 'KeyV') S.vec = S.vec ? 0 : 1;
+  if (e.code.startsWith('Arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function mapPointer(e) {
+  const rect = canvas.getBoundingClientRect();
+  const isPortrait = isPortraitMode();
+
+  if (isPortrait) {
+    const normX = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const normY = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+    const targetY = normX * GAME_H;
+    let pIdx = 0;
+    if (S.players === 2) pIdx = normY > 0.5 ? 0 : 1;
+    if (paddles[pIdx].paralyzedTimer > 0) return pIdx;
+    paddles[pIdx].targetY = targetY;
+    return pIdx;
+  } else {
+    const normX = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const normY = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+    const targetY = normY * GAME_H;
+    let pIdx = 0;
+    if (S.players === 2) pIdx = normX > 0.5 ? 1 : 0;
+    if (paddles[pIdx].paralyzedTimer > 0) return pIdx;
+    paddles[pIdx].targetY = targetY;
+    return pIdx;
+  }
+}
+
+canvas.addEventListener('mousemove', e => {
+  if (e.pointerType === 'touch') return;
+  mapPointer(e);
+});
+canvas.addEventListener('pointerdown', e => {
+  getAudio();
+  canvas.setPointerCapture(e.pointerId);
+  touchPointers[e.pointerId] = mapPointer(e);
+});
+canvas.addEventListener('pointermove', e => {
+  if (touchPointers[e.pointerId] !== undefined) mapPointer(e);
+});
+const relPointer = e => {
+  if (touchPointers[e.pointerId] !== undefined) {
+    paddles[touchPointers[e.pointerId]].targetY = null;
+    delete touchPointers[e.pointerId];
+  }
+};
+canvas.addEventListener('pointerup', relPointer);
+canvas.addEventListener('pointercancel', relPointer);
+
+// Bucle principal
+let lastTime = performance.now();
+let accumulator = 0;
+let hudTick = 0;
+
+function gameLoop(now) {
+  let frameTime = (now - lastTime) / 1000;
+  if (frameTime > 0.1) frameTime = 0.1;
+  lastTime = now;
+
+  // Actualizar cometas de fondo cósmico en tiempo real (incluso en menú)
+  updateComets(frameTime);
+
+  if (S.run && !S.pause) {
+    accumulator += frameTime;
+    while (accumulator >= FIXED_DT) {
+      physicsStep(FIXED_DT);
+      accumulator -= FIXED_DT;
+    }
+  }
+
+  render();
+  if ((hudTick++ & 3) === 0) updateHUD();
+  requestAnimationFrame(gameLoop);
+}
+
+showStep(1);
+requestAnimationFrame(gameLoop);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
